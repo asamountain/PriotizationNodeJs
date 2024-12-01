@@ -1,86 +1,137 @@
-// db.js
 import sqlite3 from "sqlite3";
-import { promisify } from "util";
+import logger from "./logger.js";
 
-const db = new sqlite3.Database("tasks.db");
+class Database {
+  constructor() {
+    this.db = null;
+  }
 
-// Convert callback-based methods to Promise-based
-const dbRun = promisify(db.run.bind(db));
-const dbAll = promisify(db.all.bind(db));
+  async init() {
+    return new Promise((resolve, reject) => {
+      try {
+        this.db = new sqlite3.Database("./tasks.db", (err) => {
+          if (err) {
+            logger.error("Database connection failed", err, "db.js");
+            reject(err);
+            return;
+          }
+          logger.info("Database connected successfully", null, "db.js");
+          this.createTables().then(resolve).catch(reject);
+        });
+      } catch (error) {
+        logger.error("Database initialization failed", error, "db.js");
+        reject(error);
+      }
+    });
+  }
 
-// Initialize database
-const initDB = async () => {
-  await dbRun(`
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            priority TEXT CHECK(priority IN ('high', 'medium', 'low')) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-};
+  async createTables() {
+    const sql = `
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                priority TEXT CHECK(priority IN ('high', 'medium', 'low')) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `;
 
-// Get all tasks
-const getTaskData = async () => {
+    return new Promise((resolve, reject) => {
+      this.db.run(sql, (err) => {
+        if (err) {
+          logger.error("Table creation failed", err, "db.js");
+          reject(err);
+          return;
+        }
+        resolve();
+        logger.info("Tables created successfully", null, "db.js");
+      });
+    });
+  }
+
+  // Your existing CRUD operations here
+  async getTaskData() {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        "SELECT * FROM tasks ORDER BY created_at DESC",
+        [],
+        (err, rows) => {
+          if (err) {
+            logger.error("Error fetching tasks", err, "db.js");
+            reject(err);
+            return;
+          }
+          resolve(rows);
+          logger.info("Tasks fetched:", rows.length, "db.js");
+        },
+      );
+    });
+  }
+
+  async addTask(task) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "INSERT INTO tasks (name, priority) VALUES (?, ?)",
+        [task.name, task.priority],
+        function (err) {
+          if (err) {
+            logger.error("Error adding task", err, "db.js");
+            reject(err);
+            return;
+          }
+          resolve(this.lastID);
+          logger.info("Task added:", this.lastID, "db.js");
+        },
+      );
+    });
+  }
+
+  async modifyTask(task) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE tasks SET name = ?, priority = ? WHERE id = ?",
+        [task.name, task.priority, task.id],
+        (err) => {
+          if (err) {
+            logger.error("Error modifying task", err, "db.js");
+            reject(err);
+            return;
+          }
+          resolve();
+          logger.info("Task modified:", task.id, "db.js");
+        },
+      );
+    });
+  }
+
+  async deleteTask(id) {
+    return new Promise((resolve, reject) => {
+      this.db.run("DELETE FROM tasks WHERE id = ?", [id], (err) => {
+        if (err) {
+          logger.error("Error deleting task", err, "db.js");
+          reject(err);
+          return;
+        }
+        resolve();
+        logger.info("Task deleted:", id, "db.js");
+      });
+    });
+  }
+}
+
+const database = new Database();
+
+export const getTaskData = (...args) => database.getTaskData(...args);
+export const addTask = (...args) => database.addTask(...args);
+export const modifyTask = (...args) => database.modifyTask(...args);
+export const deleteTask = (...args) => database.deleteTask(...args);
+export const initDatabase = async () => {
   try {
-    const tasks = await dbAll(`
-            SELECT * FROM tasks 
-            ORDER BY 
-                CASE priority 
-                    WHEN 'high' THEN 1 
-                    WHEN 'medium' THEN 2 
-                    WHEN 'low' THEN 3 
-                END,
-                created_at DESC
-        `);
-    return tasks;
+    await database.init();
+    logger.info("Database initialized successfully", null, "db.js");
   } catch (error) {
-    console.error("Error fetching tasks:", error);
-    return [];
+    logger.error("Database initialization failed", error, "db.js");
+    process.exit(1);
   }
 };
 
-// Add a new task
-const addTask = async (task) => {
-  try {
-    await dbRun("INSERT INTO tasks (name, priority) VALUES (?, ?)", [
-      task.name,
-      task.priority,
-    ]);
-    return true;
-  } catch (error) {
-    console.error("Error adding task:", error);
-    return false;
-  }
-};
-
-// Modify existing task
-const modifyTask = async (task) => {
-  try {
-    await dbRun("UPDATE tasks SET name = ?, priority = ? WHERE id = ?", [
-      task.name,
-      task.priority,
-      task.id,
-    ]);
-    return true;
-  } catch (error) {
-    console.error("Error modifying task:", error);
-    return false;
-  }
-};
-
-// Delete a task
-const deleteTask = async (id) => {
-  try {
-    await dbRun("DELETE FROM tasks WHERE id = ?", [id]);
-    return true;
-  } catch (error) {
-    console.error("Error deleting task:", error);
-    return false;
-  }
-};
-
-// Initialize database on module load
-initDB().catch(console.error);
-
-export { getTaskData, addTask, modifyTask, deleteTask };
+export default database;

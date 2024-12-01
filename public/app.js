@@ -1,52 +1,69 @@
 const socket = io();
-let tasks = [];
 
-socket.on('initialData', ({ tasks: initialTasks }) => {
-    tasks = initialTasks;
-    renderTasks();
+// Log connection status
+socket.on("connect", () => {
+  console.log("Connected to server");
 });
 
-socket.on('updateTasks', ({ tasks: updatedTasks }) => {
-    tasks = updatedTasks;
-    renderTasks();
+// Handle initial data
+socket.on("initialData", ({ data }) => {
+  console.log("Received initial data:", data);
+  renderTasks(data);
 });
 
+// Handle task updates
+socket.on("updateTasks", ({ data }) => {
+  console.log("Received task update:", data);
+  renderTasks(data);
+});
+
+// Add new task
 function addTask() {
-    const taskName = document.getElementById('taskName').value;
-    const priority = document.getElementById('priority').value;
-    
-    if (!taskName) return;
-    
-    socket.emit('addTask', {
-        name: taskName,
-        priority: priority
-    });
-    
-    document.getElementById('taskName').value = '';
+  const taskName = document.getElementById("taskName").value;
+  const priority = document.getElementById("priority").value;
+
+  if (!taskName) return;
+
+  socket.emit("addTask", {
+    name: taskName,
+    priority: priority,
+  });
+
+  document.getElementById("taskName").value = "";
 }
 
+// Modify existing task
+function modifyTask(taskId) {
+  const taskName = document.getElementById(`task-${taskId}-name`).value;
+  const priority = document.getElementById(`task-${taskId}-priority`).value;
+
+  socket.emit("modifyTask", {
+    id: taskId,
+    name: taskName,
+    priority: priority,
+  });
+}
+
+// Delete task
 function deleteTask(taskId) {
-    socket.emit('deleteTask', taskId);
+  socket.emit("deleteTask", taskId);
 }
 
-function renderTasks() {
-    const taskList = document.getElementById('taskList');
-    taskList.innerHTML = '';
-    
-    tasks.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-    }).forEach(task => {
-        const taskElement = document.createElement('div');
-        taskElement.className = `task-item ${task.priority}`;
-        taskElement.innerHTML = `
+// Render tasks to DOM
+function renderTasks(tasks) {
+  const taskList = document.getElementById("taskList");
+  taskList.innerHTML = "";
+
+  tasks.forEach((task) => {
+    const taskElement = document.createElement("div");
+    taskElement.className = `task-item ${task.priority}`;
+    taskElement.innerHTML = `
             <span>${task.name}</span>
-            <div>
+            <div class="task-controls">
                 <span class="priority-badge">${task.priority}</span>
                 <button onclick="deleteTask(${task.id})">Delete</button>
             </div>
         `;
-        taskList.appendChild(taskElement);
-    });
+    taskList.appendChild(taskElement);
+  });
 }
-
