@@ -6,12 +6,15 @@
     <title>Priority Task Manager</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Priority Task Manager</h1>
-        
-        <div class="task-form">
+        <h1 style="margin:0;">Priority Task Manager</h1>
+        <div id="visualization">
+    <svg id="priorityChart"></svg>
+</div>
+<div class="task-form">
             <input type="text" id="taskName" placeholder="Task name">
             <select id="priority">
                 <option value="high">High</option>

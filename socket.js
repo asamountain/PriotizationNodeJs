@@ -57,6 +57,13 @@ const setupSocket = (io) => {
       }
     });
 
+    let updateTimeout;
+    socket.on("updateTasks", ({ data }) => {
+      clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(() => {
+        createPriorityMatrix(data);
+      }, 100);
+    });
     socket.on("disconnect", () => {
       logger.info("Client disconnected", null, "socket.js");
     });
