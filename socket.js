@@ -2,18 +2,28 @@ import { getTaskData, addTask, modifyTask, deleteTask } from "./db.js";
 import logger from "./logger.js";
 
 const setupSocket = (io) => {
+  // Process tasks to ensure numeric values
+  const processTaskData = (tasks) => {
+    return tasks.map((task) => ({
+      ...task,
+      importance: Number(task.importance) || 0,
+      urgency: Number(task.urgency) || 0,
+    }));
+  };
+
   io.on("connection", (socket) => {
     logger.info("New client connected", null, "socket.js");
 
-    // Send initial data
+    // Send initial data with processed numeric values
     getTaskData()
       .then((data) => {
+        const processedData = processTaskData(data);
         logger.info(
           "Initial data fetched",
-          { count: data.length },
+          { count: processedData.length },
           "socket.js",
         );
-        socket.emit("initialData", { data });
+        socket.emit("initialData", { data: processedData });
       })
       .catch((error) => {
         logger.error("Failed to fetch initial data", error, "socket.js");
@@ -27,7 +37,7 @@ const setupSocket = (io) => {
         logger.info("Task added successfully", { id: taskId }, "socket.js");
 
         const data = await getTaskData();
-        io.emit("updateTasks", { data });
+        io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         logger.error("Failed to add task", error, "socket.js");
       }
@@ -39,7 +49,7 @@ const setupSocket = (io) => {
         await modifyTask(task);
 
         const data = await getTaskData();
-        io.emit("updateTasks", { data });
+        io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         logger.error("Failed to modify task", error, "socket.js");
       }
@@ -51,7 +61,7 @@ const setupSocket = (io) => {
         await deleteTask(id);
 
         const data = await getTaskData();
-        io.emit("updateTasks", { data });
+        io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         logger.error("Failed to delete task", error, "socket.js");
       }
@@ -61,9 +71,10 @@ const setupSocket = (io) => {
     socket.on("updateTasks", ({ data }) => {
       clearTimeout(updateTimeout);
       updateTimeout = setTimeout(() => {
-        createPriorityMatrix(data);
+        createPriorityMatrix(processTaskData(data));
       }, 100);
     });
+
     socket.on("disconnect", () => {
       logger.info("Client disconnected", null, "socket.js");
     });

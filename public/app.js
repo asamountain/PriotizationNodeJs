@@ -8,45 +8,21 @@ socket.on("connect", () => {
 window.priorityChart = null;
 
 function createPriorityMatrix(tasks) {
-  const priorities = {
-    high: { importance: 8, urgency: 8 },
-    medium: { importance: 5, urgency: 5 },
-    low: { importance: 2, urgency: 2 },
-  };
-
-  // Convert priority levels to numerical values
-  const priorityData = tasks.map((task) => ({
-    name: task.name,
-    importance: priorities[task.priority].importance,
-    urgency: priorities[task.priority].urgency,
-  }));
-
   // Get window dimensions
-  const width = window.innerWidth * 0.95; // 95% of window width
-  const height = window.innerHeight * 0.8; // 80% of window height
+  const width = window.innerWidth * 0.95;
+  const height = window.innerHeight * 0.8;
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
 
   // Clear existing content
   d3.select("#priorityChart").selectAll("*").remove();
 
-  // Update SVG container size
+  // Create SVG container
   const svg = d3
     .select("#priorityChart")
     .attr("width", width)
     .attr("height", height)
     .style("display", "block")
     .style("margin", "0");
-
-  // Add resize event listener
-  window.addEventListener("resize", function () {
-    const newWidth = window.innerWidth * 1;
-    const newHeight = window.innerHeight * 1;
-
-    svg.attr("width", newWidth).attr("height", newHeight);
-
-    // Recalculate scales and redraw chart
-    createPriorityMatrix(tasks);
-  });
 
   // Create scales
   const xScale = d3
@@ -91,29 +67,74 @@ function createPriorityMatrix(tasks) {
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(yScale));
 
-  // Add tasks as points with labels
-  const tasks_group = svg
+  // Modify the simulation and connector code
+  const simulation = d3
+    .forceSimulation(tasks)
+    .force("x", d3.forceX((d) => xScale(d.importance)).strength(0.1))
+    .force("y", d3.forceY((d) => yScale(d.urgency)).strength(0.1))
+    .force("collide", d3.forceCollide().radius(30))
+    .on("tick", () => {
+      // Ensure valid coordinates by clamping values
+      labels
+        .attr("x", (d) => xScale(d.importance) + 8)
+        .attr("y", (d) =>
+          Math.max(
+            margin.top,
+            Math.min(height - margin.bottom, d.y || yScale(d.urgency)),
+          ),
+        );
+
+      connectors
+        .attr("x1", (d) => xScale(d.importance))
+        .attr("y1", (d) => yScale(d.urgency))
+        .attr("x2", (d) => xScale(d.importance) + 8)
+        .attr("y2", (d) =>
+          Math.max(
+            margin.top,
+            Math.min(height - margin.bottom, d.y || yScale(d.urgency)),
+          ),
+        );
+    });
+  // Create task groups
+  const taskGroups = svg
     .selectAll(".task")
-    .data(priorityData)
-    .enter()
-    .append("g")
+    .data(tasks)
+    .join("g")
     .attr("class", "task");
 
-  tasks_group
+  // Add circles
+  taskGroups
     .append("circle")
     .attr("cx", (d) => xScale(d.importance))
     .attr("cy", (d) => yScale(d.urgency))
     .attr("r", 4)
     .attr("fill", "black");
 
-  tasks_group
+  // Add labels
+  const labels = taskGroups
     .append("text")
-    .attr("x", (d) => xScale(d.importance) + 5)
+    .attr("x", (d) => xScale(d.importance) + 8)
     .attr("y", (d) => yScale(d.urgency))
     .text((d) => d.name)
-    .attr("font-size", "10px")
+    .attr("font-size", "12px")
     .attr("alignment-baseline", "middle");
+
+  // Add connecting lines
+  const connectors = taskGroups
+    .append("line")
+    .attr("class", "connector")
+    .attr("stroke", "#666")
+    .attr("stroke-width", 0.5);
+
+  // Add resize handler
+  window.addEventListener("resize", () => {
+    const newWidth = window.innerWidth * 0.95;
+    const newHeight = window.innerHeight * 0.8;
+    svg.attr("width", newWidth).attr("height", newHeight);
+    createPriorityMatrix(tasks);
+  });
 }
+
 // Update socket event handlers
 socket.on("initialData", ({ data }) => {
   console.log("Received initial data:", data);
@@ -158,19 +179,28 @@ socket.on("updateTasks", ({ data }) => {
 });
 
 // Add new task
+// Modify the task structure in addTask function
 function addTask() {
   const taskName = document.getElementById("taskName").value;
-  const priority = document.getElementById("priority").value;
+  const importance = document.getElementById("importance").value;
+  const urgency = document.getElementById("urgency").value;
 
   if (!taskName) return;
 
   socket.emit("addTask", {
     name: taskName,
-    priority: priority,
+    importance: parseFloat(importance),
+    urgency: parseFloat(urgency),
   });
-
-  document.getElementById("taskName").value = "";
 }
+const formHTML = `
+<input type="text" id="taskName" placeholder="Task name">
+<input type="range" id="importance" min="0" max="10" step="0.5" value="5">
+<label for="importance">Importance: <span id="importanceValue">5</span>/10</label>
+<input type="range" id="urgency" min="0" max="10" step="0.5" value="5">
+<label for="urgency">Urgency: <span id="urgencyValue">5</span>/10</label>
+<button onclick="addTask()">Add Task</button>
+`;
 
 // Modify existing task
 function modifyTask(taskId) {

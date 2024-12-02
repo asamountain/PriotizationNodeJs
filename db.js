@@ -30,7 +30,8 @@ class Database {
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                priority TEXT CHECK(priority IN ('high', 'medium', 'low')) NOT NULL,
+                importance REAL CHECK(importance >= 0 AND importance <= 10),
+                urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `;
@@ -70,8 +71,8 @@ class Database {
   async addTask(task) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        "INSERT INTO tasks (name, priority) VALUES (?, ?)",
-        [task.name, task.priority],
+        "INSERT INTO tasks (name, importance, urgency) VALUES (?, ?, ?)",
+        [task.name, task.importance, task.urgency],
         function (err) {
           if (err) {
             logger.error("Error adding task", err, "db.js");
@@ -88,8 +89,8 @@ class Database {
   async modifyTask(task) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        "UPDATE tasks SET name = ?, priority = ? WHERE id = ?",
-        [task.name, task.priority, task.id],
+        "UPDATE tasks SET name = ?, importance = ?, urgency = ? WHERE id = ?",
+        [task.name, task.importance, task.urgency, task.id],
         (err) => {
           if (err) {
             logger.error("Error modifying task", err, "db.js");
@@ -102,7 +103,6 @@ class Database {
       );
     });
   }
-
   async deleteTask(id) {
     return new Promise((resolve, reject) => {
       this.db.run("DELETE FROM tasks WHERE id = ?", [id], (err) => {
