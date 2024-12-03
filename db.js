@@ -27,14 +27,13 @@ class Database {
 
   async createTables() {
     const sql = `
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                importance REAL CHECK(importance >= 0 AND importance <= 10),
-                urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `;
+        CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    importance REAL CHECK(importance >= 0 AND importance <= 10),
+    urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`;
 
     return new Promise((resolve, reject) => {
       this.db.run(sql, (err) => {

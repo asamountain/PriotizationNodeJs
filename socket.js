@@ -5,12 +5,13 @@ const setupSocket = (io) => {
   // Process tasks to ensure numeric values
   const processTaskData = (tasks) => {
     return tasks.map((task) => ({
-      ...task,
+      id: task.id,
+      name: task.name,
       importance: Number(task.importance) || 0,
       urgency: Number(task.urgency) || 0,
+      created_at: task.created_at,
     }));
   };
-
   io.on("connection", (socket) => {
     logger.info("New client connected", null, "socket.js");
 
@@ -21,7 +22,7 @@ const setupSocket = (io) => {
         logger.info(
           "Initial data fetched",
           { count: processedData.length },
-          "socket.js",
+          "socket.js"
         );
         socket.emit("initialData", { data: processedData });
       })
@@ -67,12 +68,14 @@ const setupSocket = (io) => {
       }
     });
 
-    let updateTimeout;
-    socket.on("updateTasks", ({ data }) => {
-      clearTimeout(updateTimeout);
-      updateTimeout = setTimeout(() => {
-        createPriorityMatrix(processTaskData(data));
-      }, 100);
+    socket.on("updateTasks", async (task) => {
+      try {
+        const data = await getTaskData();
+        const processedData = processTaskData(data);
+        io.emit("updateTasks", { data: processedData });
+      } catch (error) {
+        logger.error("Failed to update tasks", error, "socket.js");
+      }
     });
 
     socket.on("disconnect", () => {

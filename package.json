@@ -15,5 +15,8 @@
 	  	  "portfinder": "^1.0.32",
 	  	  "socket.io": "^4.8.1",
 	  	  "sqlite3": "^5.1.7"
+	  },
+	  "devDependencies": {
+	  	  "stylelint-config-standard": "^36.0.1"
 	  }
 }
