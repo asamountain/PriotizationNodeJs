@@ -13,7 +13,7 @@ window.handleDeleteTask = (taskId) => {
   taskManager.deleteTask(taskId);
 };
 
-window.updateSliderValue = (slider, valueId) => {
+window.updateNumericValue = (slider, valueId) => {
   const displayElement = document.getElementById(valueId);
   if (displayElement) {
     displayElement.textContent = slider.value;

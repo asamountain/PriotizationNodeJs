@@ -11,7 +11,6 @@ export class TaskManager {
     this.socket.on("connect", () => console.log("Connected to server"));
     this.socket.on("initialData", ({ data }) => this.handleData(data));
     this.socket.on("updateTasks", ({ data }) => this.handleData(data));
- 
   }
 
   handleData(data) {
@@ -54,33 +53,33 @@ export class TaskManager {
   generateInputs(task) {
     return `
       <input type="text" value="${task.name}" id="task-${task.id}-name">
-      ${this.generateSliders(task)}
+      ${this.generateNumeric(task)}
     `;
   }
 
-  generateSliders(task) {
+  generateNumeric(task) {
     return `
       <div class="slider-container">
-        ${this.generateSliderGroup("importance", task)}
-        ${this.generateSliderGroup("urgency", task)}
+        ${this.generateNumericGroup("importance", task)}
+        ${this.generateNumericGroup("urgency", task)}
       </div>
     `;
   }
 
-  generateSliderGroup(type, task) {
+  generateNumericGroup(type, task) {
     return `
-      <div class="slider-group">
+      <div class="numeric-group">
         <label>${type.charAt(0).toUpperCase() + type.slice(1)}: 
           <span id="task-${task.id}-${type}-value">${task[type]}</span>
         </label>
-        <input 
-          type="range" 
+      <input 
+          type="number" 
           id="task-${task.id}-${type}" 
           min="0" 
           max="10" 
           step="1" 
           value="${task[type]}"
-          oninput="updateSliderValue(this, 'task-${task.id}-${type}-value')"
+          oninput="updateNumericValue(this, 'task-${task.id}-${type}-value')"
         >
       </div>
     `;

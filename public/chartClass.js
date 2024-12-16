@@ -74,14 +74,54 @@ export class PriorityChart {
       .join("g")
       .attr("class", "task");
 
-    taskGroups.append("circle").attr("r", 1).attr("fill", "black");
+    // Create a tooltip div element
+    const tooltip = d3
+      .select("body")
+      .append("div")
+      .attr("class", "tooltip")
+      .style("position", "absolute")
+      .style("visibility", "hidden")
+      .style("background", "#fff")
+      .style("border", "1px solid #ccc")
+      .style("padding", "5px")
+      .style("border-radius", "4px");
+
+    taskGroups
+      .on("mouseover", function (event, d) {
+        tooltip
+          .html(
+            `<strong>${d.name}</strong><br>Importance: ${d.importance}<br>Urgency: ${d.urgency}`
+          )
+          .style("visibility", "visible");
+      })
+      .on("mousemove", function (event) {
+        tooltip
+          .style("top", event.pageY - 10 + "px")
+          .style("left", event.pageX + 10 + "px");
+      })
+      .on("mouseout", function () {
+        tooltip.style("visibility", "hidden");
+      });
+
+    taskGroups
+      .append("polyline")
+      .attr("class", "connector")
+      .attr("stroke", "#666")
+      .attr("stroke-width", 0.5)
+      .attr("points", (d) => {
+        const x1 = this.xScale(d.importance);
+        const y1 = this.yScale(d.urgency);
+        const x2 = d.x;
+        const y2 = d.y;
+        return `${x1},${y1} ${x2},${y2}`;
+      });
 
     taskGroups
       .append("text")
       .attr("x", 8)
       .attr("y", 0)
       .text((d) => d.name)
-      .attr("font-size", "25px")
+      .attr("font-size", "14px") // Adjust font size for readability
       .attr("alignment-baseline", "middle");
 
     const connectors = taskGroups
@@ -94,31 +134,25 @@ export class PriorityChart {
   }
 
   setupSimulation(tasks, taskGroups, connectors) {
-    // Add initial positions to tasks
     tasks.forEach((d) => {
       d.x = this.xScale(d.importance);
       d.y = this.yScale(d.urgency);
     });
 
-    // Create simulation with modified forces
     const simulation = d3
       .forceSimulation(tasks)
-      .force("x", d3.forceX((d) => this.xScale(d.importance)).strength(3))
-      .force("y", d3.forceY((d) => this.yScale(d.urgency)).strength(3))
-      .force("collide", d3.forceCollide().radius(100))
-      .force("charge", d3.forceManyBody().strength(-175));
+      .force("x", d3.forceX((d) => this.xScale(d.importance)).strength(1))
+      .force("y", d3.forceY((d) => this.yScale(d.urgency)).strength(1))
+      .force("collision", d3.forceCollide().radius(50)) // Adjust radius as needed
+      .force("charge", d3.forceManyBody().strength(-100)); // Adjust charge for better spacing
 
-    // Update positions on tick
     simulation.on("tick", () => {
-      // Update task groups
       taskGroups.attr("transform", (d) => {
-        // Constrain positions within bounds
         const x = Math.max(30, Math.min(this.width - 30, d.x));
         const y = Math.max(30, Math.min(this.height - 30, d.y));
         return `translate(${x},${y})`;
       });
 
-      // Update connectors
       connectors
         .attr("x1", (d) => this.xScale(d.importance) - d.x)
         .attr("y1", (d) => this.yScale(d.urgency) - d.y)

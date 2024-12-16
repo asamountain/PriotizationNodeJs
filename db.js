@@ -52,7 +52,7 @@ class Database {
   async getTaskData() {
     return new Promise((resolve, reject) => {
       this.db.all(
-        "SELECT * FROM tasks ORDER BY created_at DESC",
+        "SELECT * FROM tasks ORDER BY importance DESC, urgency DESC",
         [],
         (err, rows) => {
           if (err) {
@@ -62,7 +62,7 @@ class Database {
           }
           resolve(rows);
           logger.info("Tasks fetched:", rows.length, "db.js");
-        },
+        }
       );
     });
   }
@@ -80,7 +80,7 @@ class Database {
           }
           resolve(this.lastID);
           logger.info("Task added:", this.lastID, "db.js");
-        },
+        }
       );
     });
   }
@@ -98,7 +98,7 @@ class Database {
           }
           resolve();
           logger.info("Task modified:", task.id, "db.js");
-        },
+        }
       );
     });
   }
