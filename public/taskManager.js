@@ -41,7 +41,7 @@ export class TaskManager {
 
   generateTaskHTML(task) {
     return `
-      <div class="task-item">
+      <div class="task-item ${task.done ? 'task-done' : ''}">
         <div class="task-content">
           ${this.generateInputs(task)}
           ${this.generateButtons(task)}
@@ -52,7 +52,7 @@ export class TaskManager {
 
   generateInputs(task) {
     return `
-      <input type="text" value="${task.name}" id="task-${task.id}-name">
+      <input type="text" value="${task.name}" id="task-${task.id}-name" ${task.done ? 'disabled' : ''}>
       ${this.generateNumeric(task)}
     `;
   }
@@ -88,8 +88,11 @@ export class TaskManager {
   generateButtons(task) {
     return `
       <div class="button-group">
-        <button onclick="taskManager.modifyTask(${task.id})">Update</button>
+        <button onclick="taskManager.modifyTask(${task.id})" ${task.done ? 'disabled' : ''}>Update</button>
         <button onclick="taskManager.deleteTask(${task.id})">Delete</button>
+        <button onclick="taskManager.toggleDone(${task.id})" class="done-btn ${task.done ? 'done' : ''}">
+          ${task.done ? '✓ Done' : 'Mark Done'}
+        </button>
       </div>
     `;
   }
@@ -121,5 +124,9 @@ export class TaskManager {
 
     if (!task.name) return;
     socket.emit("addTask", task);
+  }
+
+  toggleDone(taskId) {
+    this.socket.emit("toggleDone", taskId);
   }
 }

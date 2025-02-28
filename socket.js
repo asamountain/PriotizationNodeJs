@@ -1,4 +1,4 @@
-import { getTaskData, addTask, modifyTask, deleteTask } from "./db.js";
+import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone } from "./db.js";
 import logger from "./logger.js";
 
 const setupSocket = (io) => {
@@ -9,6 +9,7 @@ const setupSocket = (io) => {
       name: task.name,
       importance: Number(task.importance) || 0,
       urgency: Number(task.urgency) || 0,
+      done: Boolean(task.done),
       created_at: task.created_at,
     }));
   };
@@ -75,6 +76,18 @@ const setupSocket = (io) => {
         io.emit("updateTasks", { data: processedData });
       } catch (error) {
         logger.error("Failed to update tasks", error, "socket.js");
+      }
+    });
+
+    socket.on("toggleDone", async (id) => {
+      try {
+        logger.info(`Toggling done status for task with ID: ${id}`, null, "socket.js");
+        await toggleTaskDone(id);
+
+        const data = await getTaskData();
+        io.emit("updateTasks", { data: processTaskData(data) });
+      } catch (error) {
+        logger.error("Failed to toggle task done status", error, "socket.js");
       }
     });
 

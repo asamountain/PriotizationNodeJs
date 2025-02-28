@@ -26,24 +26,32 @@ class Database {
   }
 
   async createTables() {
-    const sql = `
-        CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    importance REAL CHECK(importance >= 0 AND importance <= 10),
-    urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)`;
+    const migrations = [
+      // Create table if it doesn't exist
+      `CREATE TABLE IF NOT EXISTS tasks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          importance REAL CHECK(importance >= 0 AND importance <= 10),
+          urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      // Add done column if it doesn't exist
+      `ALTER TABLE tasks ADD COLUMN done INTEGER DEFAULT 0`
+    ];
 
     return new Promise((resolve, reject) => {
-      this.db.run(sql, (err) => {
-        if (err) {
-          logger.error("Table creation failed", err, "db.js");
-          reject(err);
-          return;
-        }
+      this.db.serialize(() => {
+        migrations.forEach(sql => {
+          this.db.run(sql, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              logger.error("Migration failed", err, "db.js");
+              reject(err);
+              return;
+            }
+          });
+        });
         resolve();
-        logger.info("Tables created successfully", null, "db.js");
+        logger.info("Tables and migrations completed successfully", null, "db.js");
       });
     });
   }
@@ -52,7 +60,7 @@ class Database {
   async getTaskData() {
     return new Promise((resolve, reject) => {
       this.db.all(
-        "SELECT * FROM tasks ORDER BY importance DESC, urgency DESC",
+        "SELECT * FROM tasks WHERE done = 0 ORDER BY importance DESC, urgency DESC",
         [],
         (err, rows) => {
           if (err) {
@@ -115,6 +123,24 @@ class Database {
       });
     });
   }
+
+  async toggleTaskDone(id) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE tasks SET done = NOT done WHERE id = ?",
+        [id],
+        (err) => {
+          if (err) {
+            logger.error("Error toggling task done status", err, "db.js");
+            reject(err);
+            return;
+          }
+          resolve();
+          logger.info("Task done status toggled:", id, "db.js");
+        }
+      );
+    });
+  }
 }
 
 const database = new Database();
@@ -123,6 +149,7 @@ export const getTaskData = (...args) => database.getTaskData(...args);
 export const addTask = (...args) => database.addTask(...args);
 export const modifyTask = (...args) => database.modifyTask(...args);
 export const deleteTask = (...args) => database.deleteTask(...args);
+export const toggleTaskDone = (...args) => database.toggleTaskDone(...args);
 export const initDatabase = async () => {
   try {
     await database.init();
