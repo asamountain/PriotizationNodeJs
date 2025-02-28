@@ -8,16 +8,32 @@
     />
     <title>Priority Task Manager</title>
     <link rel="stylesheet" href="style.css" />
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+      .tooltip {
+        position: absolute;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        pointer-events: none;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+    </style>
   </head>
   <body>
     <div class="container">
-      <h1 style="margin: 0">Priority Task Manager</h1>
-      <div id="visualization">
-        <svg id="priorityChart" aria-label="Priority chart visualization"></svg>
+      <h1>Priority Task Manager</h1>
+      
+      <!-- Chart container with explicit dimensions -->
+      <div id="priority-chart" class="chart-container">
+        <!-- SVG will be created by D3 -->
       </div>
-      <div class="task-form">
+
+      <!-- Rest of your form and task list -->
+      <form class="task-form" id="task-form">
         <input type="text" id="taskName" placeholder="Task name" required />
         <div class="slider-container">
           <div class="slider-group">
@@ -57,10 +73,26 @@
             />
           </div>
         </div>
-        <button onclick="addTask()">Add Task</button>
+        <button type="submit">Add Task</button>
+      </form>
+      
+      <div id="task-list" class="task-list">
+        <!-- Tasks will be rendered here -->
       </div>
-      <div class="task-list" id="taskList"></div>
     </div>
-    <script type="module" src="app.js"></script>
+
+    <script>
+      window.updateSliderValue = function(slider, outputId) {
+        document.getElementById(outputId).textContent = slider.value;
+      }
+    </script>
+
+    <!-- Load your module script -->
+    <script type="module">
+      import { TaskManager } from './taskManager.js';
+      document.addEventListener('DOMContentLoaded', () => {
+        window.taskManager = new TaskManager();
+      });
+    </script>
   </body>
 </html>

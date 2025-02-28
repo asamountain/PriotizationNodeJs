@@ -82,3 +82,65 @@ input[type="text"] {
   border-radius: 4px;
   box-sizing: border-box;
 }
+
+.chart-container {
+  width: 600px;
+  height: 400px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#priority-chart {
+  width: 100%;
+  height: 100%;
+}
+
+#priority-chart svg {
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+/* Grid styling */
+.grid line {
+  stroke: #e0e0e0;
+  stroke-width: 1px;
+}
+
+.grid path {
+  stroke-width: 0;
+}
+
+/* Axis styling */
+.axis-label {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.x-axis path,
+.y-axis path,
+.x-axis line,
+.y-axis line {
+  stroke: #999;
+}
+
+.x-axis text,
+.y-axis text {
+  font-size: 12px;
+  fill: #666;
+}
+
+/* Task points styling */
+circle {
+  transition: all 0.2s ease;
+}
+
+.tooltip {
+  font-size: 12px;
+  font-weight: bold;
+  fill: #333;
+  pointer-events: none;
+}

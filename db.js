@@ -135,16 +135,17 @@ class Database {
             reject(err);
             return;
           }
-          resolve();
           logger.info("Task done status toggled:", id, "db.js");
+          resolve();
         }
-      );
-    });
+      )
+    })
   }
 }
 
 const database = new Database();
 
+// Add these exports back
 export const getTaskData = (...args) => database.getTaskData(...args);
 export const addTask = (...args) => database.addTask(...args);
 export const modifyTask = (...args) => database.modifyTask(...args);

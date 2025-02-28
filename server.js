@@ -16,7 +16,7 @@ const server = createServer(app);
 const io = new Server(server);
 
 // Middleware
-app.use(express.static("public"));
+app.use(express.static(join(__dirname, "public")));
 app.use(express.json());
 
 // Setup socket connection

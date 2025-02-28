@@ -1,132 +1,229 @@
-import { PriorityChart } from "./chartClass.js";
-
 export class TaskManager {
-  constructor(socket) {
-    this.socket = socket;
-    this.chart = new PriorityChart("#priorityChart");
-    this.setupSocketListeners();
+  constructor() {
+    try {
+      // Use the global io object from Socket.IO client
+      if (typeof io === 'undefined') {
+        throw new Error('Socket.IO not loaded');
+      }
+      this.socket = io(window.location.origin);
+      
+      this.taskList = document.querySelector('#task-list');
+      this.taskForm = document.querySelector('#task-form');
+      
+      this.initializeSocket();
+      this.initializeChart();
+      this.initializeForm();
+    } catch (error) {
+      console.error('TaskManager constructor error:', error);
+    }
   }
 
-  setupSocketListeners() {
-    this.socket.on("connect", () => console.log("Connected to server"));
-    this.socket.on("initialData", ({ data }) => this.handleData(data));
-    this.socket.on("updateTasks", ({ data }) => this.handleData(data));
+  initializeSocket() {
+    this.socket.on('connect', () => {
+      this.socket.emit('requestInitialData');
+    });
+
+    this.socket.on('initialData', (data) => {
+      this.handleData(data);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    this.socket.on('error', (error) => {
+      console.error('Server error:', error);
+    });
+
+    this.socket.on('taskAdded', (response) => {
+      console.log('Task added:', response);
+    });
+
+    this.socket.on('updateTasks', (data) => {
+      this.handleData(data);
+    });
+  }
+
+  initializeForm() {
+    if (this.taskForm) {
+      this.taskForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.addTask();
+      });
+    }
+  }
+
+  initializeChart() {
+    const chartContainer = document.querySelector('#priority-chart');
+    if (!chartContainer) return;
+
+    try {
+      // Set explicit dimensions for the SVG
+      const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+      const width = 600;
+      const height = 400;
+
+      // Clear and create new SVG with explicit dimensions
+      chartContainer.innerHTML = '';
+      
+      this.svg = d3.select('#priority-chart')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .style('border', '1px solid #ccc');
+
+      this.chartGroup = this.svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      const chartWidth = width - margin.left - margin.right;
+      const chartHeight = height - margin.top - margin.bottom;
+
+      // Create scales
+      this.xScale = d3.scaleLinear()
+        .domain([0, 10])
+        .range([0, chartWidth]);
+
+      this.yScale = d3.scaleLinear()
+        .domain([0, 10])
+        .range([chartHeight, 0]);
+
+      // Add axes
+      this.chartGroup.append('g')
+        .attr('class', 'x-axis')
+        .attr('transform', `translate(0,${chartHeight})`)
+        .call(d3.axisBottom(this.xScale));
+
+      this.chartGroup.append('g')
+        .attr('class', 'y-axis')
+        .call(d3.axisLeft(this.yScale));
+
+      // Add axis labels
+      this.svg.append('text')
+        .attr('class', 'x-label')
+        .attr('text-anchor', 'middle')
+        .attr('x', width / 2)
+        .attr('y', height - 10)
+        .text('Urgency');
+
+      this.svg.append('text')
+        .attr('class', 'y-label')
+        .attr('text-anchor', 'middle')
+        .attr('transform', `translate(${margin.left / 3}, ${height / 2}) rotate(-90)`)
+        .text('Importance');
+
+      // Create tooltip div
+      this.tooltip = d3.select('body').append('div')
+        .attr('class', 'tooltip')
+        .style('opacity', 0);
+
+    } catch (error) {
+      console.error('Chart initialization error:', error);
+    }
   }
 
   handleData(data) {
-    if (!data) return;
-    const processedData = this.processData(data);
-    this.renderAll(processedData);
-  }
-
-  processData(tasks) {
-    return tasks.map((task) => ({
-      ...task,
-      importance: Number(task.importance) || 0,
-      urgency: Number(task.urgency) || 0,
-    }));
-  }
-
-  renderAll(data) {
-    this.renderTaskList(data);
-    this.chart.render(data);
+    if (!data || !Array.isArray(data.data)) return;
+    try {
+      this.renderTaskList(data.data);
+      this.renderChart(data.data);
+    } catch (error) {
+      console.error('Data rendering error:', error);
+    }
   }
 
   renderTaskList(tasks) {
-    const taskList = document.getElementById("taskList");
-    taskList.innerHTML = tasks
-      .map((task) => this.generateTaskHTML(task))
-      .join("");
-  }
+    if (!this.taskList) return;
 
-  generateTaskHTML(task) {
-    return `
-      <div class="task-item ${task.done ? 'task-done' : ''}">
-        <div class="task-content">
-          ${this.generateInputs(task)}
-          ${this.generateButtons(task)}
+    try {
+      this.taskList.innerHTML = tasks.map(task => `
+        <div class="task" data-id="${task.id}">
+          <span class="task-name">${task.name}</span>
+          <span class="task-importance">Importance: ${task.importance}</span>
+          <span class="task-urgency">Urgency: ${task.urgency}</span>
+          <button class="toggle-done" onclick="taskManager.toggleDone(${task.id})">
+            ${task.done ? 'Undo' : 'Done'}
+          </button>
         </div>
-      </div>
-    `;
+      `).join('');
+    } catch (error) {
+      console.error('Task list rendering error:', error);
+    }
   }
 
-  generateInputs(task) {
-    return `
-      <input type="text" value="${task.name}" id="task-${task.id}-name" ${task.done ? 'disabled' : ''}>
-      ${this.generateNumeric(task)}
-    `;
-  }
+  renderChart(tasks) {
+    if (!this.chartGroup) return;
 
-  generateNumeric(task) {
-    return `
-      <div class="slider-container">
-        ${this.generateNumericGroup("importance", task)}
-        ${this.generateNumericGroup("urgency", task)}
-      </div>
-    `;
-  }
+    try {
+      // Clear existing circles
+      this.chartGroup.selectAll('circle').remove();
 
-  generateNumericGroup(type, task) {
-    return `
-      <div class="numeric-group">
-        <label>${type.charAt(0).toUpperCase() + type.slice(1)}: 
-          <span id="task-${task.id}-${type}-value">${task[type]}</span>
-        </label>
-      <input 
-          type="number" 
-          id="task-${task.id}-${type}" 
-          min="0" 
-          max="10" 
-          step="1" 
-          value="${task[type]}"
-          oninput="updateNumericValue(this, 'task-${task.id}-${type}-value')"
-        >
-      </div>
-    `;
-  }
+      // Add new circles with tooltips
+      this.chartGroup.selectAll('circle')
+        .data(tasks)
+        .enter()
+        .append('circle')
+        .attr('cx', d => this.xScale(d.urgency))
+        .attr('cy', d => this.yScale(d.importance))
+        .attr('r', 6)
+        .style('fill', '#2196F3')
+        .style('opacity', 0.6)
+        .style('cursor', 'pointer')
+        .on('mouseover', (event, d) => {
+          this.tooltip.transition()
+            .duration(200)
+            .style('opacity', .9);
+          this.tooltip.html(`
+            <strong>${d.name}</strong><br/>
+            Importance: ${d.importance}<br/>
+            Urgency: ${d.urgency}
+          `)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
+        })
+        .on('mouseout', () => {
+          this.tooltip.transition()
+            .duration(500)
+            .style('opacity', 0);
+        });
 
-  generateButtons(task) {
-    return `
-      <div class="button-group">
-        <button onclick="taskManager.modifyTask(${task.id})" ${task.done ? 'disabled' : ''}>Update</button>
-        <button onclick="taskManager.deleteTask(${task.id})">Delete</button>
-        <button onclick="taskManager.toggleDone(${task.id})" class="done-btn ${task.done ? 'done' : ''}">
-          ${task.done ? '✓ Done' : 'Mark Done'}
-        </button>
-      </div>
-    `;
-  }
-
-  modifyTask(taskId) {
-    const task = {
-      id: taskId,
-      name: document.getElementById(`task-${taskId}-name`).value,
-      importance: parseFloat(
-        document.getElementById(`task-${taskId}-importance`).value
-      ),
-      urgency: parseFloat(
-        document.getElementById(`task-${taskId}-urgency`).value
-      ),
-    };
-    socket.emit("modifyTask", task);
-  }
-
-  deleteTask(taskId) {
-    socket.emit("deleteTask", taskId);
+    } catch (error) {
+      console.error('Chart rendering error:', error);
+    }
   }
 
   addTask() {
+    const nameInput = document.getElementById('taskName');
+    const importanceInput = document.getElementById('importance');
+    const urgencyInput = document.getElementById('urgency');
+
+    if (!nameInput || !importanceInput || !urgencyInput) return;
+
     const task = {
-      name: document.getElementById("taskName").value,
-      importance: parseFloat(document.getElementById("importance").value),
-      urgency: parseFloat(document.getElementById("urgency").value),
+      name: nameInput.value,
+      importance: parseFloat(importanceInput.value),
+      urgency: parseFloat(urgencyInput.value)
     };
 
-    if (!task.name) return;
-    socket.emit("addTask", task);
+    if (!task.name) {
+      alert('Please enter a task name');
+      return;
+    }
+
+    this.socket.emit('addTask', task);
+
+    // Clear form
+    nameInput.value = '';
+    importanceInput.value = '5';
+    urgencyInput.value = '5';
+    
+    const importanceValue = document.getElementById('importanceValue');
+    const urgencyValue = document.getElementById('urgencyValue');
+    
+    if (importanceValue) importanceValue.textContent = '5';
+    if (urgencyValue) urgencyValue.textContent = '5';
   }
 
   toggleDone(taskId) {
-    this.socket.emit("toggleDone", taskId);
+    this.socket.emit('toggleDone', taskId);
   }
 }
