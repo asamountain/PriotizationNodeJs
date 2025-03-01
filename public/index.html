@@ -278,6 +278,24 @@
         .category-schedule { background: rgba(33, 150, 243, 0.1); color: #1976d2; }
         .category-delegate { background: rgba(255, 152, 0, 0.1); color: #f57c00; }
         .category-dont-do { background: rgba(158, 158, 158, 0.1); color: #757575; }
+
+        /* Debug info and no-tasks message */
+        .debug-info {
+            background: var(--background-secondary);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .no-tasks-message {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            background: var(--background-secondary);
+            border-radius: 8px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -358,6 +376,13 @@
                 </button>
             </div>
             
+            <!-- Debug info to see if tasks are being received -->
+            <div class="debug-info" style="margin-bottom: 10px; color: #666;">
+                Total tasks: {{ tasks.length }}, 
+                Active: {{ activeTasks.length }}, 
+                Completed: {{ completedTasks.length }}
+            </div>
+            
             <!-- Active Tasks -->
             <div v-for="task in activeTasks" :key="task.id" class="task">
                 <div class="task-info">
@@ -367,14 +392,102 @@
                         <span>Urgency: {{ task.urgency }}</span>
                         <span v-if="task.done" class="task-done">✓ Completed</span>
                     </div>
+                    
+                    <!-- Subtasks section -->
+                    <div v-if="getSubtasks(task.id).length > 0" class="subtasks-container">
+                        <div class="subtasks-header">
+                            <span>Subtasks:</span>
+                        </div>
+                        <div v-for="subtask in getSubtasks(task.id)" :key="subtask.id" class="subtask">
+                            <div class="subtask-info">
+                                <span class="subtask-name">
+                                    <span class="subtask-bullet">•</span> 
+                                    {{ subtask.name }}
+                                </span>
+                                <span v-if="subtask.done" class="task-done">✓</span>
+                            </div>
+                            <button 
+                                class="toggle-done subtask-btn"
+                                @click="toggleDone(subtask.id)"
+                                :class="{ done: subtask.done }"
+                            >
+                                {{ subtask.done ? 'Undo' : 'Done' }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <button 
-                    class="toggle-done"
-                    @click="toggleDone(task.id)"
-                    :class="{ done: task.done }"
-                >
-                    {{ task.done ? 'Undo' : 'Done' }}
-                </button>
+                
+                <div class="task-actions">
+                    <button 
+                        class="toggle-done"
+                        @click="toggleDone(task.id)"
+                        :class="{ done: task.done }"
+                    >
+                        {{ task.done ? 'Undo' : 'Done' }}
+                    </button>
+                    <button 
+                        class="add-subtask-btn"
+                        @click="showAddSubtask(task.id)"
+                    >
+                        + Subtask
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Message when no active tasks -->
+            <div v-if="activeTasks.length === 0" class="no-tasks-message">
+                No active tasks. Add a task to get started!
+            </div>
+            
+            <!-- Subtask Form (conditionally shown) -->
+            <div v-if="showSubtaskForm" class="subtask-form">
+                <h4>Add Subtask to: {{ getTaskName(selectedTaskId) }}</h4>
+                <div class="form-group">
+                    <label class="form-label" for="subtaskName">Subtask Name</label>
+                    <input 
+                        type="text" 
+                        id="subtaskName" 
+                        v-model="newSubtask.name"
+                        class="form-input"
+                        placeholder="Enter subtask name"
+                        required
+                    >
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-group">
+                        <label class="form-label" for="subtaskImportance">
+                            Importance: {{ newSubtask.importance }}
+                        </label>
+                        <input
+                            type="range"
+                            id="subtaskImportance"
+                            v-model.number="newSubtask.importance"
+                            min="0"
+                            max="10"
+                            step="1"
+                        >
+                    </div>
+
+                    <div class="slider-group">
+                        <label class="form-label" for="subtaskUrgency">
+                            Urgency: {{ newSubtask.urgency }}
+                        </label>
+                        <input
+                            type="range"
+                            id="subtaskUrgency"
+                            v-model.number="newSubtask.urgency"
+                            min="0"
+                            max="10"
+                            step="1"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn" @click="addSubtask">Add Subtask</button>
+                    <button type="button" class="btn-secondary" @click="cancelAddSubtask">Cancel</button>
+                </div>
             </div>
             
             <!-- Completed Tasks Section (conditionally shown) -->
@@ -387,6 +500,29 @@
                             <span>Importance: {{ task.importance }}</span>
                             <span>Urgency: {{ task.urgency }}</span>
                             <span class="task-done">✓ Completed</span>
+                        </div>
+                        
+                        <!-- Subtasks section for completed tasks -->
+                        <div v-if="getSubtasks(task.id).length > 0" class="subtasks-container">
+                            <div class="subtasks-header">
+                                <span>Subtasks:</span>
+                            </div>
+                            <div v-for="subtask in getSubtasks(task.id)" :key="subtask.id" class="subtask">
+                                <div class="subtask-info">
+                                    <span class="subtask-name">
+                                        <span class="subtask-bullet">•</span> 
+                                        {{ subtask.name }}
+                                    </span>
+                                    <span v-if="subtask.done" class="task-done">✓</span>
+                                </div>
+                                <button 
+                                    class="toggle-done subtask-btn"
+                                    @click="toggleDone(subtask.id)"
+                                    :class="{ done: subtask.done }"
+                                >
+                                    {{ subtask.done ? 'Undo' : 'Done' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <button 
@@ -409,49 +545,67 @@
                 return {
                     tasks: [],
                     showCompleted: false,
-                    currentTheme: 'default', // Default theme
+                    currentTheme: 'default',
                     newTask: {
                         name: '',
                         importance: 5,
                         urgency: 5
-                    }
+                    },
+                    newSubtask: {
+                        name: '',
+                        importance: 5,
+                        urgency: 5
+                    },
+                    selectedTaskId: null,
+                    showSubtaskForm: false
                 }
             },
             computed: {
                 activeTasks() {
-                    return this.tasks.filter(task => !task.done);
+                    return this.tasks.filter(task => !task.done && task.parent_id === null);
                 },
                 completedTasks() {
-                    return this.tasks.filter(task => task.done);
+                    return this.tasks.filter(task => task.done && task.parent_id === null);
+                },
+                getSubtasks() {
+                    return (parentId) => {
+                        return this.tasks.filter(task => task.parent_id === parentId);
+                    };
+                },
+                getTaskName() {
+                    return (taskId) => {
+                        const task = this.tasks.find(task => task.id === taskId);
+                        return task ? task.name : '';
+                    };
                 }
             },
             watch: {
-                // Save theme preference to localStorage
                 currentTheme(newTheme) {
                     localStorage.setItem('priority-task-theme', newTheme);
-                    // Update chart colors when theme changes
                     if (this.taskManager) {
                         this.taskManager.updateChartColors();
                     }
                 }
             },
             mounted() {
-                // Load saved theme from localStorage
+                console.log('Vue app mounted');
+                this.taskManager = new TaskManager();
+                
+                this.taskManager.onTasksUpdate = (tasks) => {
+                    console.log('onTasksUpdate called with', tasks.length, 'tasks');
+                    this.tasks = tasks;
+                };
+                
+                this.taskManager.setVueApp(this);
+                
                 const savedTheme = localStorage.getItem('priority-task-theme');
                 if (savedTheme) {
                     this.currentTheme = savedTheme;
                 }
-                
-                this.taskManager = new TaskManager();
-                this.taskManager.onTasksUpdate = (tasks) => {
-                    this.tasks = tasks;
-                };
-                
-                // Make taskManager aware of the Vue instance for theme changes
-                this.taskManager.setVueApp(this);
             },
             methods: {
                 addTask() {
+                    console.log('Adding task:', this.newTask);
                     this.taskManager.addTask(this.newTask);
                     this.newTask = {
                         name: '',
@@ -460,7 +614,34 @@
                     };
                 },
                 toggleDone(taskId) {
+                    console.log('Toggling done for task:', taskId);
                     this.taskManager.toggleDone(taskId);
+                },
+                showAddSubtask(taskId) {
+                    console.log('Showing subtask form for task:', taskId);
+                    this.selectedTaskId = taskId;
+                    this.showSubtaskForm = true;
+                    this.newSubtask = {
+                        name: '',
+                        importance: 5,
+                        urgency: 5
+                    };
+                },
+                addSubtask() {
+                    if (this.selectedTaskId) {
+                        console.log('Adding subtask to parent:', this.selectedTaskId);
+                        this.taskManager.addSubtask(this.newSubtask, this.selectedTaskId);
+                        this.newSubtask = {
+                            name: '',
+                            importance: 5,
+                            urgency: 5
+                        };
+                        this.showSubtaskForm = false;
+                    }
+                },
+                cancelAddSubtask() {
+                    this.showSubtaskForm = false;
+                    this.selectedTaskId = null;
                 }
             }
         }).mount('#app')

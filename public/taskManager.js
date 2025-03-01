@@ -262,47 +262,28 @@ export class TaskManager {
   }
 
   handleData(data) {
-    if (!data || !Array.isArray(data.data)) return;
+    if (!data || !Array.isArray(data.data)) {
+      console.error('Invalid data received:', data);
+      return;
+    }
+    
     try {
+      console.log('Received data:', data.data);
+      
       // Store data for resize events
       this._lastData = data.data;
       
       // Call the Vue callback if it exists
       if (this.onTasksUpdate && typeof this.onTasksUpdate === 'function') {
+        console.log('Calling Vue callback with data:', data.data.length, 'tasks');
         this.onTasksUpdate(data.data);
+      } else {
+        console.warn('Vue callback not available');
       }
       
-      this.renderTaskList(data.data);
       this.renderChart(data.data);
     } catch (error) {
       console.error('Data rendering error:', error);
-    }
-  }
-
-  renderTaskList(tasks) {
-    if (!this.taskList) return;
-
-    try {
-      this.taskList.innerHTML = tasks.map(task => `
-        <div class="task" data-id="${task.id}">
-          <div class="task-info">
-            <span class="task-name">${task.name}</span>
-            <div class="task-metrics">
-              <span>Importance: ${task.importance}</span>
-              <span>Urgency: ${task.urgency}</span>
-              ${task.done ? '<span class="task-done">✓ Completed</span>' : ''}
-            </div>
-          </div>
-          <button 
-            class="toggle-done ${task.done ? 'done' : ''}"
-            onclick="taskManager.toggleDone(${task.id})"
-          >
-            ${task.done ? 'Undo' : 'Done'}
-          </button>
-        </div>
-      `).join('');
-    } catch (error) {
-      console.error('Task list rendering error:', error);
     }
   }
 
@@ -313,16 +294,55 @@ export class TaskManager {
       // Clear existing circles
       this.chartGroup.selectAll('circle').remove();
 
-      // Filter out done tasks for the chart
-      const activeTasks = tasks.filter(task => !task.done);
+      // Filter out done tasks and subtasks for the chart
+      // Only main tasks are shown on the chart
+      const activeTasks = tasks.filter(task => !task.done && task.parent_id === null);
       
-      // Add new circles with tooltips
+      // Group tasks by their position to detect overlaps
+      const taskPositions = {};
+      activeTasks.forEach(task => {
+        const key = `${task.importance}-${task.urgency}`;
+        if (!taskPositions[key]) {
+          taskPositions[key] = [];
+        }
+        taskPositions[key].push(task);
+      });
+      
+      // Process each task with potential offset for overlaps
+      const processedTasks = [];
+      Object.values(taskPositions).forEach(tasksAtPosition => {
+        if (tasksAtPosition.length === 1) {
+          // No overlap, use exact position
+          processedTasks.push({
+            ...tasksAtPosition[0],
+            offsetX: 0,
+            offsetY: 0
+          });
+        } else {
+          // Handle overlaps by creating a small cluster
+          const clusterRadius = Math.min(5, 2 + tasksAtPosition.length);
+          tasksAtPosition.forEach((task, i) => {
+            // Calculate position in a circle around the actual point
+            const angle = (i * (2 * Math.PI)) / tasksAtPosition.length;
+            const offsetX = clusterRadius * Math.cos(angle);
+            const offsetY = clusterRadius * Math.sin(angle);
+            
+            processedTasks.push({
+              ...task,
+              offsetX,
+              offsetY
+            });
+          });
+        }
+      });
+      
+      // Add new circles with tooltips and offsets for overlapping points
       this.chartGroup.selectAll('circle')
-        .data(activeTasks)
+        .data(processedTasks)
         .enter()
         .append('circle')
-        .attr('cx', d => this.xScale(d.urgency))
-        .attr('cy', d => this.yScale(d.importance))
+        .attr('cx', d => this.xScale(d.urgency) + d.offsetX)
+        .attr('cy', d => this.yScale(d.importance) + d.offsetY)
         .attr('r', 6)
         .style('fill', d => {
           // Color based on quadrant using CSS variables
@@ -331,9 +351,29 @@ export class TaskManager {
           if (d.importance < 5 && d.urgency >= 5) return 'var(--q3-color)';   // Delegate
           return 'var(--q4-color)';  // Don't Do
         })
-        .style('opacity', 0.6)
+        .style('opacity', 0.8)
         .style('cursor', 'pointer')
         .on('mouseover', (event, d) => {
+          // Highlight this circle
+          d3.select(event.currentTarget)
+            .transition()
+            .duration(200)
+            .attr('r', 8)
+            .style('opacity', 1)
+            .style('stroke', 'var(--text-primary)')
+            .style('stroke-width', 2);
+          
+          // Get subtasks for this task
+          const subtasks = tasks.filter(task => task.parent_id === d.id);
+          const subtasksHtml = subtasks.length > 0 
+            ? `<div style="margin-top: 8px; border-top: 1px solid var(--text-secondary); padding-top: 5px;">
+                <strong>Subtasks (${subtasks.length}):</strong>
+                <ul style="margin: 5px 0; padding-left: 15px;">
+                  ${subtasks.map(st => `<li>${st.name} ${st.done ? '✓' : ''}</li>`).join('')}
+                </ul>
+              </div>` 
+            : '';
+          
           this.tooltip.transition()
             .duration(200)
             .style('opacity', .9)
@@ -348,16 +388,35 @@ export class TaskManager {
           else if (d.importance < 5 && d.urgency >= 5) quadrantColor = 'var(--q3-color)';
           else quadrantColor = 'var(--q4-color)';
           
+          // Show count of tasks at this position if there are overlaps
+          const key = `${d.importance}-${d.urgency}`;
+          const tasksAtPosition = taskPositions[key] || [];
+          const overlapInfo = tasksAtPosition.length > 1 
+            ? `<div style="margin-top: 5px; font-style: italic; color: var(--text-secondary)">
+                (${tasksAtPosition.length} tasks at this position)
+               </div>` 
+            : '';
+          
           this.tooltip.html(`
             <strong style="color: ${quadrantColor}">${d.name}</strong><br/>
             Importance: ${d.importance}<br/>
             Urgency: ${d.urgency}<br/>
             Category: ${this.getQuadrantName(d.importance, d.urgency)}
+            ${overlapInfo}
+            ${subtasksHtml}
           `)
             .style('left', (event.pageX + 10) + 'px')
             .style('top', (event.pageY - 28) + 'px');
         })
-        .on('mouseout', () => {
+        .on('mouseout', (event) => {
+          // Restore circle size
+          d3.select(event.currentTarget)
+            .transition()
+            .duration(200)
+            .attr('r', 6)
+            .style('opacity', 0.8)
+            .style('stroke', 'none');
+          
           this.tooltip.transition()
             .duration(500)
             .style('opacity', 0);
@@ -409,5 +468,10 @@ export class TaskManager {
 
   toggleDone(taskId) {
     this.socket.emit('toggleDone', taskId);
+  }
+
+  addSubtask(subtask, parentId) {
+    console.log('TaskManager.addSubtask called with:', subtask, 'parentId:', parentId);
+    this.socket.emit('addSubtask', { subtask, parentId });
   }
 }

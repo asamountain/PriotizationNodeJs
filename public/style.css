@@ -322,3 +322,119 @@ button.toggle-done.done {
 .task-done {
   color: var(--success-color);
 }
+
+/* Subtask styling */
+.subtasks-container {
+  margin-top: 10px;
+  padding-left: 15px;
+  border-left: 2px solid var(--background-secondary);
+}
+
+.subtasks-header {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.subtask {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  margin-bottom: 5px;
+}
+
+.subtask-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subtask-name {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.subtask-bullet {
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+.subtask-btn {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.add-subtask-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px dashed var(--primary-color);
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.add-subtask-btn:hover {
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.subtask-form {
+  background: var(--background-primary);
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  border: 1px solid var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.subtask-form h4 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-secondary {
+  background: var(--background-secondary);
+  color: var(--text-secondary);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+}
+
+/* Debug info and no-tasks message */
+.debug-info {
+  background: var(--background-secondary);
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.no-tasks-message {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  background: var(--background-secondary);
+  border-radius: 8px;
+  font-style: italic;
+}

@@ -1,4 +1,5 @@
 import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone } from "./db.js";
+import database from "./db.js";
 
 const setupSocket = (io) => {
   // Process tasks to ensure numeric values
@@ -10,6 +11,7 @@ const setupSocket = (io) => {
       urgency: Number(task.urgency) || 0,
       done: task.done === 1 || task.done === true,
       created_at: task.created_at,
+      parent_id: task.parent_id
     }));
   };
   io.on("connection", (socket) => {
@@ -20,6 +22,7 @@ const setupSocket = (io) => {
       .then((data) => {
         const processedData = processTaskData(data);
         console.log("Initial data fetched:", processedData.length, "items");
+        console.log("Sample data:", processedData.slice(0, 2));
         socket.emit("initialData", { data: processedData });
       })
       .catch((error) => {
@@ -83,6 +86,19 @@ const setupSocket = (io) => {
         io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         console.error("Failed to toggle task done status:", error);
+      }
+    });
+
+    socket.on("addSubtask", async ({ subtask, parentId }) => {
+      try {
+        console.log("Adding subtask:", subtask, "to parent:", parentId);
+        const subtaskId = await database.addSubtask(subtask, parentId);
+        console.log("Subtask added successfully, ID:", subtaskId);
+
+        const data = await getTaskData();
+        io.emit("updateTasks", { data: processTaskData(data) });
+      } catch (error) {
+        console.error("Failed to add subtask:", error);
       }
     });
 

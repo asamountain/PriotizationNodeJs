@@ -26,16 +26,21 @@ class Database {
 
   async createTables() {
     const migrations = [
-      // Create table if it doesn't exist
+      // Create tasks table if it doesn't exist
       `CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           importance REAL CHECK(importance >= 0 AND importance <= 10),
           urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          done INTEGER DEFAULT 0,
+          parent_id INTEGER DEFAULT NULL,
+          FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE CASCADE
       )`,
       // Add done column if it doesn't exist
-      `ALTER TABLE tasks ADD COLUMN done INTEGER DEFAULT 0`
+      `ALTER TABLE tasks ADD COLUMN done INTEGER DEFAULT 0`,
+      // Add parent_id column if it doesn't exist
+      `ALTER TABLE tasks ADD COLUMN parent_id INTEGER DEFAULT NULL REFERENCES tasks(id) ON DELETE CASCADE`
     ];
 
     return new Promise((resolve, reject) => {
@@ -59,7 +64,7 @@ class Database {
   async getTaskData() {
     return new Promise((resolve, reject) => {
       this.db.all(
-        "SELECT * FROM tasks ORDER BY importance DESC, urgency DESC",
+        "SELECT * FROM tasks ORDER BY CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END, parent_id, importance DESC, urgency DESC",
         [],
         (err, rows) => {
           if (err) {
@@ -140,6 +145,25 @@ class Database {
       )
     })
   }
+
+  // Add a subtask to a parent task
+  async addSubtask(subtask, parentId) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "INSERT INTO tasks (name, importance, urgency, parent_id) VALUES (?, ?, ?, ?)",
+        [subtask.name, subtask.importance, subtask.urgency, parentId],
+        function (err) {
+          if (err) {
+            console.error("Error adding subtask:", err);
+            reject(err);
+            return;
+          }
+          resolve(this.lastID);
+          console.log("Subtask added:", this.lastID, "to parent:", parentId);
+        }
+      );
+    });
+  }
 }
 
 const database = new Database();
@@ -150,6 +174,7 @@ export const addTask = (...args) => database.addTask(...args);
 export const modifyTask = (...args) => database.modifyTask(...args);
 export const deleteTask = (...args) => database.deleteTask(...args);
 export const toggleTaskDone = (...args) => database.toggleTaskDone(...args);
+export const addSubtask = (...args) => database.addSubtask(...args);
 export const initDatabase = async () => {
   try {
     await database.init();
