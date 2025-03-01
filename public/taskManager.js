@@ -111,6 +111,66 @@ export class TaskManager {
         .attr('transform', `translate(${margin.left / 3}, ${height / 2}) rotate(-90)`)
         .text('Importance');
 
+      // Add quadrant lines
+      const midX = chartWidth / 2;
+      const midY = chartHeight / 2;
+
+      // Horizontal line
+      this.chartGroup.append('line')
+        .attr('x1', 0)
+        .attr('y1', midY)
+        .attr('x2', chartWidth)
+        .attr('y2', midY)
+        .attr('stroke', '#ccc')
+        .attr('stroke-dasharray', '4');
+
+      // Vertical line
+      this.chartGroup.append('line')
+        .attr('x1', midX)
+        .attr('y1', 0)
+        .attr('x2', midX)
+        .attr('y2', chartHeight)
+        .attr('stroke', '#ccc')
+        .attr('stroke-dasharray', '4');
+
+      // Add quadrant labels
+      const labelOffset = 20;
+      const fontSize = '12px';
+
+      // Q1: Important & Urgent (Do First)
+      this.chartGroup.append('text')
+        .attr('x', chartWidth - labelOffset)
+        .attr('y', labelOffset)
+        .attr('text-anchor', 'end')
+        .style('font-size', fontSize)
+        .style('fill', '#d32f2f')
+        .text('Do First');
+
+      // Q2: Important & Not Urgent (Schedule)
+      this.chartGroup.append('text')
+        .attr('x', labelOffset)
+        .attr('y', labelOffset)
+        .style('font-size', fontSize)
+        .style('fill', '#1976d2')
+        .text('Schedule');
+
+      // Q3: Not Important & Urgent (Delegate)
+      this.chartGroup.append('text')
+        .attr('x', chartWidth - labelOffset)
+        .attr('y', chartHeight - labelOffset)
+        .attr('text-anchor', 'end')
+        .style('font-size', fontSize)
+        .style('fill', '#ff9800')
+        .text('Delegate');
+
+      // Q4: Not Important & Not Urgent (Don't Do)
+      this.chartGroup.append('text')
+        .attr('x', labelOffset)
+        .attr('y', chartHeight - labelOffset)
+        .style('font-size', fontSize)
+        .style('fill', '#757575')
+        .text("Don't Do");
+
       // Create tooltip div
       this.tooltip = d3.select('body').append('div')
         .attr('class', 'tooltip')
@@ -165,7 +225,13 @@ export class TaskManager {
         .attr('cx', d => this.xScale(d.urgency))
         .attr('cy', d => this.yScale(d.importance))
         .attr('r', 6)
-        .style('fill', '#2196F3')
+        .style('fill', d => {
+          // Color based on quadrant
+          if (d.importance >= 5 && d.urgency >= 5) return '#d32f2f';  // Do First
+          if (d.importance >= 5 && d.urgency < 5) return '#1976d2';   // Schedule
+          if (d.importance < 5 && d.urgency >= 5) return '#ff9800';   // Delegate
+          return '#757575';  // Don't Do
+        })
         .style('opacity', 0.6)
         .style('cursor', 'pointer')
         .on('mouseover', (event, d) => {
@@ -175,7 +241,8 @@ export class TaskManager {
           this.tooltip.html(`
             <strong>${d.name}</strong><br/>
             Importance: ${d.importance}<br/>
-            Urgency: ${d.urgency}
+            Urgency: ${d.urgency}<br/>
+            Category: ${this.getQuadrantName(d.importance, d.urgency)}
           `)
             .style('left', (event.pageX + 10) + 'px')
             .style('top', (event.pageY - 28) + 'px');
@@ -189,6 +256,13 @@ export class TaskManager {
     } catch (error) {
       console.error('Chart rendering error:', error);
     }
+  }
+
+  getQuadrantName(importance, urgency) {
+    if (importance >= 5 && urgency >= 5) return 'Do First';
+    if (importance >= 5 && urgency < 5) return 'Schedule';
+    if (importance < 5 && urgency >= 5) return 'Delegate';
+    return "Don't Do";
   }
 
   addTask() {

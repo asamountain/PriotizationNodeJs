@@ -1,98 +1,330 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Priority Task Manager</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script type="module" src="https://unpkg.com/vue@3/dist/vue.esm-browser.js"></script>
     <style>
-      .tooltip {
-        position: absolute;
-        padding: 8px;
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        pointer-events: none;
-        font-size: 14px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>Priority Task Manager</h1>
-      
-      <!-- Chart container with explicit dimensions -->
-      <div id="priority-chart" class="chart-container">
-        <!-- SVG will be created by D3 -->
-      </div>
+        :root {
+            --primary-color: #2196F3;
+            --success-color: #4CAF50;
+            --warning-color: #FFC107;
+            --error-color: #F44336;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --background-primary: #fff;
+            --background-secondary: #f5f5f5;
+        }
 
-      <!-- Rest of your form and task list -->
-      <form class="task-form" id="task-form">
-        <input type="text" id="taskName" placeholder="Task name" required />
-        <div class="slider-container">
-          <div class="slider-group">
-            <label for="importance"
-              >Importance: <span id="importanceValue">5</span></label
-            >
-            <input
-              type="range"
-              id="importance"
-              min="0"
-              max="10"
-              step="1"
-              value="5"
-              oninput="updateSliderValue(this, 'importanceValue')"
-              aria-valuemin="0"
-              aria-valuemax="10"
-              aria-valuenow="5"
-              aria-labelledby="importanceLabel"
-            />
-          </div>
-          <div class="slider-group">
-            <label for="urgency"
-              >Urgency: <span id="urgencyValue">5</span></label
-            >
-            <input
-              type="range"
-              id="urgency"
-              min="0"
-              max="10"
-              step="1"
-              value="5"
-              oninput="updateSliderValue(this, 'urgencyValue')"
-              aria-valuemin="0"
-              aria-valuemax="10"
-              aria-valuenow="5"
-              aria-labelledby="urgencyLabel"
-            />
-          </div>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--background-secondary);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        .app-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin: 0;
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .chart-container {
+            background: var(--background-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .task-form {
+            background: var(--background-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .slider-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .slider-group {
+            background: var(--background-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 0.5rem 0;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+        }
+
+        .task-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .task {
+            background: var(--background-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .task:hover {
+            transform: translateY(-2px);
+        }
+
+        .task-info {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .task-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .task-metrics {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .toggle-done {
+            background: none;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .toggle-done:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .tooltip {
+            position: absolute;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            font-size: 0.9rem;
+            z-index: 1000;
+            max-width: 200px;
+        }
+
+        .tooltip strong {
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .tooltip-category {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        .category-do-first { background: rgba(244, 67, 54, 0.1); color: #d32f2f; }
+        .category-schedule { background: rgba(33, 150, 243, 0.1); color: #1976d2; }
+        .category-delegate { background: rgba(255, 152, 0, 0.1); color: #f57c00; }
+        .category-dont-do { background: rgba(158, 158, 158, 0.1); color: #757575; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <header class="app-header">
+            <h1 class="app-title">Priority Task Manager</h1>
+        </header>
+
+        <div id="priority-chart" class="chart-container">
+            <!-- D3 chart will be rendered here -->
         </div>
-        <button type="submit">Add Task</button>
-      </form>
-      
-      <div id="task-list" class="task-list">
-        <!-- Tasks will be rendered here -->
-      </div>
+
+        <form class="task-form" @submit.prevent="addTask">
+            <div class="form-group">
+                <label class="form-label" for="taskName">Task Name</label>
+                <input 
+                    type="text" 
+                    id="taskName" 
+                    v-model="newTask.name"
+                    class="form-input"
+                    placeholder="Enter task name"
+                    required
+                >
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-group">
+                    <label class="form-label" for="importance">
+                        Importance: {{ newTask.importance }}
+                    </label>
+                    <input
+                        type="range"
+                        id="importance"
+                        v-model.number="newTask.importance"
+                        min="0"
+                        max="10"
+                        step="1"
+                    >
+                </div>
+
+                <div class="slider-group">
+                    <label class="form-label" for="urgency">
+                        Urgency: {{ newTask.urgency }}
+                    </label>
+                    <input
+                        type="range"
+                        id="urgency"
+                        v-model.number="newTask.urgency"
+                        min="0"
+                        max="10"
+                        step="1"
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="btn">Add Task</button>
+        </form>
+
+        <div class="task-list">
+            <div v-for="task in tasks" :key="task.id" class="task">
+                <div class="task-info">
+                    <span class="task-name">{{ task.name }}</span>
+                    <div class="task-metrics">
+                        <span>Importance: {{ task.importance }}</span>
+                        <span>Urgency: {{ task.urgency }}</span>
+                    </div>
+                </div>
+                <button 
+                    class="toggle-done"
+                    @click="toggleDone(task.id)"
+                    :class="{ 'done': task.done }"
+                >
+                    {{ task.done ? 'Undo' : 'Done' }}
+                </button>
+            </div>
+        </div>
     </div>
 
-    <script>
-      window.updateSliderValue = function(slider, outputId) {
-        document.getElementById(outputId).textContent = slider.value;
-      }
-    </script>
-
-    <!-- Load your module script -->
     <script type="module">
-      import { TaskManager } from './taskManager.js';
-      document.addEventListener('DOMContentLoaded', () => {
-        window.taskManager = new TaskManager();
-      });
+        import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+        import { TaskManager } from './taskManager.js'
+
+        const app = createApp({
+            data() {
+                return {
+                    tasks: [],
+                    newTask: {
+                        name: '',
+                        importance: 5,
+                        urgency: 5
+                    }
+                }
+            },
+            mounted() {
+                this.taskManager = new TaskManager();
+                this.taskManager.onTasksUpdate = (tasks) => {
+                    this.tasks = tasks;
+                };
+            },
+            methods: {
+                addTask() {
+                    this.taskManager.addTask(this.newTask);
+                    this.newTask = {
+                        name: '',
+                        importance: 5,
+                        urgency: 5
+                    };
+                },
+                toggleDone(taskId) {
+                    this.taskManager.toggleDone(taskId);
+                }
+            }
+        }).mount('#app')
     </script>
-  </body>
+</body>
 </html>

@@ -1,5 +1,4 @@
 import sqlite3 from "sqlite3";
-import logger from "./logger.js";
 
 class Database {
   constructor() {
@@ -11,15 +10,15 @@ class Database {
       try {
         this.db = new sqlite3.Database("./tasks.db", (err) => {
           if (err) {
-            logger.error("Database connection failed", err, "db.js");
+            console.error("Database connection failed:", err);
             reject(err);
             return;
           }
-          logger.info("Database connected successfully", null, "db.js");
+          console.log("Database connected successfully");
           this.createTables().then(resolve).catch(reject);
         });
       } catch (error) {
-        logger.error("Database initialization failed", error, "db.js");
+        console.error("Database initialization failed:", error);
         reject(error);
       }
     });
@@ -44,14 +43,14 @@ class Database {
         migrations.forEach(sql => {
           this.db.run(sql, (err) => {
             if (err && !err.message.includes('duplicate column')) {
-              logger.error("Migration failed", err, "db.js");
+              console.error("Migration failed:", err);
               reject(err);
               return;
             }
           });
         });
         resolve();
-        logger.info("Tables and migrations completed successfully", null, "db.js");
+        console.log("Tables and migrations completed successfully");
       });
     });
   }
@@ -64,12 +63,12 @@ class Database {
         [],
         (err, rows) => {
           if (err) {
-            logger.error("Error fetching tasks", err, "db.js");
+            console.error("Error fetching tasks:", err);
             reject(err);
             return;
           }
           resolve(rows);
-          logger.info("Tasks fetched:", rows.length, "db.js");
+          console.log("Tasks fetched:", rows.length);
         }
       );
     });
@@ -82,12 +81,12 @@ class Database {
         [task.name, task.importance, task.urgency],
         function (err) {
           if (err) {
-            logger.error("Error adding task", err, "db.js");
+            console.error("Error adding task:", err);
             reject(err);
             return;
           }
           resolve(this.lastID);
-          logger.info("Task added:", this.lastID, "db.js");
+          console.log("Task added:", this.lastID);
         }
       );
     });
@@ -100,12 +99,12 @@ class Database {
         [task.name, task.importance, task.urgency, task.id],
         (err) => {
           if (err) {
-            logger.error("Error modifying task", err, "db.js");
+            console.error("Error modifying task:", err);
             reject(err);
             return;
           }
           resolve();
-          logger.info("Task modified:", task.id, "db.js");
+          console.log("Task modified:", task.id);
         }
       );
     });
@@ -114,12 +113,12 @@ class Database {
     return new Promise((resolve, reject) => {
       this.db.run("DELETE FROM tasks WHERE id = ?", [id], (err) => {
         if (err) {
-          logger.error("Error deleting task", err, "db.js");
+          console.error("Error deleting task:", err);
           reject(err);
           return;
         }
         resolve();
-        logger.info("Task deleted:", id, "db.js");
+        console.log("Task deleted:", id);
       });
     });
   }
@@ -131,11 +130,11 @@ class Database {
         [id],
         (err) => {
           if (err) {
-            logger.error("Error toggling task done status", err, "db.js");
+            console.error("Error toggling task done status:", err);
             reject(err);
             return;
           }
-          logger.info("Task done status toggled:", id, "db.js");
+          console.log("Task done status toggled:", id);
           resolve();
         }
       )
@@ -154,9 +153,9 @@ export const toggleTaskDone = (...args) => database.toggleTaskDone(...args);
 export const initDatabase = async () => {
   try {
     await database.init();
-    logger.info("Database initialized successfully", null, "db.js");
+    console.log("Database initialized successfully");
   } catch (error) {
-    logger.error("Database initialization failed", error, "db.js");
+    console.error("Database initialization failed:", error);
     process.exit(1);
   }
 };

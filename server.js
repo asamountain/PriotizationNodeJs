@@ -5,7 +5,6 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { initDatabase } from "./db.js";
 import setupSocket from "./socket.js";
-import logger from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,10 +31,10 @@ const startServer = async (port = 3000) => {
     try {
         await initDatabase();
         server.listen(port, () => {
-            logger.info("Server started", { port }, "server.js");
+            console.log(`Server started on port ${port}`);
         });
     } catch (error) {
-        logger.error("Server startup failed", error, "server.js");
+        console.error("Server startup failed:", error);
         process.exit(1);
     }
 };
@@ -58,17 +57,16 @@ const findAvailablePort = (startPort) => {
 findAvailablePort(3000)
     .then(port => startServer(port))
     .catch(error => {
-        logger.error("Port finding failed", error, "server.js");
+        console.error("Port finding failed:", error);
         process.exit(1);
     });
 
 // Error handling
 process.on("unhandledRejection", (error) => {
-    logger.error("Unhandled Rejection", error, "server.js");
+    console.error("Unhandled Rejection:", error);
 });
 
 process.on("uncaughtException", (error) => {
-    logger.error("Uncaught Exception", error, "server.js");
+    console.error("Uncaught Exception:", error);
     process.exit(1);
 });
-
