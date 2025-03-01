@@ -10,7 +10,9 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script type="module" src="https://unpkg.com/vue@3/dist/vue.esm-browser.js"></script>
     <style>
+        /* Define theme variables */
         :root {
+            /* Default theme (Blue) */
             --primary-color: #2196F3;
             --success-color: #4CAF50;
             --warning-color: #FFC107;
@@ -19,6 +21,66 @@
             --text-secondary: #666;
             --background-primary: #fff;
             --background-secondary: #f5f5f5;
+            
+            /* Quadrant colors */
+            --q1-color: #d32f2f;
+            --q2-color: #1976d2;
+            --q3-color: #ff9800;
+            --q4-color: #757575;
+        }
+        
+        /* Dark theme */
+        [data-theme="dark"] {
+            --primary-color: #64B5F6;
+            --success-color: #81C784;
+            --warning-color: #FFD54F;
+            --error-color: #E57373;
+            --text-primary: #E0E0E0;
+            --text-secondary: #BDBDBD;
+            --background-primary: #333;
+            --background-secondary: #222;
+            
+            /* Quadrant colors */
+            --q1-color: #EF5350;
+            --q2-color: #42A5F5;
+            --q3-color: #FFA726;
+            --q4-color: #9E9E9E;
+        }
+        
+        /* Purple theme */
+        [data-theme="purple"] {
+            --primary-color: #9C27B0;
+            --success-color: #8BC34A;
+            --warning-color: #FFEB3B;
+            --error-color: #FF5722;
+            --text-primary: #37474F;
+            --text-secondary: #607D8B;
+            --background-primary: #F3E5F5;
+            --background-secondary: #E1BEE7;
+            
+            /* Quadrant colors */
+            --q1-color: #C2185B;
+            --q2-color: #7B1FA2;
+            --q3-color: #FFA000;
+            --q4-color: #5D4037;
+        }
+        
+        /* Green theme */
+        [data-theme="green"] {
+            --primary-color: #4CAF50;
+            --success-color: #009688;
+            --warning-color: #CDDC39;
+            --error-color: #F44336;
+            --text-primary: #1B5E20;
+            --text-secondary: #388E3C;
+            --background-primary: #E8F5E9;
+            --background-secondary: #C8E6C9;
+            
+            /* Quadrant colors */
+            --q1-color: #D84315;
+            --q2-color: #2E7D32;
+            --q3-color: #F57F17;
+            --q4-color: #455A64;
         }
 
         body {
@@ -34,6 +96,8 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         .app-header {
@@ -46,7 +110,7 @@
             font-size: 2.5rem;
             font-weight: 600;
             margin: 0;
-            background: linear-gradient(45deg, #2196F3, #1976D2);
+            background: linear-gradient(45deg, var(--primary-color), var(--primary-color));
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -58,6 +122,8 @@
             padding: 1.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             margin-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .task-form {
@@ -215,9 +281,20 @@
     </style>
 </head>
 <body>
-    <div id="app" class="container">
+    <div id="app" class="container" :data-theme="currentTheme">
         <header class="app-header">
             <h1 class="app-title">Priority Task Manager</h1>
+            
+            <!-- Add theme switcher -->
+            <div class="theme-switcher">
+                <label for="theme-select">Theme:</label>
+                <select id="theme-select" v-model="currentTheme" class="theme-select">
+                    <option value="default">Blue (Default)</option>
+                    <option value="dark">Dark</option>
+                    <option value="purple">Purple</option>
+                    <option value="green">Green</option>
+                </select>
+            </div>
         </header>
 
         <div id="priority-chart" class="chart-container">
@@ -271,21 +348,54 @@
         </form>
 
         <div class="task-list">
-            <div v-for="task in tasks" :key="task.id" class="task">
+            <div class="task-list-header">
+                <h3>Task List</h3>
+                <button 
+                    class="toggle-completed-btn"
+                    @click="showCompleted = !showCompleted"
+                >
+                    {{ showCompleted ? 'Hide Completed' : 'Show Completed' }}
+                </button>
+            </div>
+            
+            <!-- Active Tasks -->
+            <div v-for="task in activeTasks" :key="task.id" class="task">
                 <div class="task-info">
                     <span class="task-name">{{ task.name }}</span>
                     <div class="task-metrics">
                         <span>Importance: {{ task.importance }}</span>
                         <span>Urgency: {{ task.urgency }}</span>
+                        <span v-if="task.done" class="task-done">✓ Completed</span>
                     </div>
                 </div>
                 <button 
                     class="toggle-done"
                     @click="toggleDone(task.id)"
-                    :class="{ 'done': task.done }"
+                    :class="{ done: task.done }"
                 >
                     {{ task.done ? 'Undo' : 'Done' }}
                 </button>
+            </div>
+            
+            <!-- Completed Tasks Section (conditionally shown) -->
+            <div v-if="showCompleted && completedTasks.length > 0" class="completed-tasks-section">
+                <h4>Completed Tasks</h4>
+                <div v-for="task in completedTasks" :key="task.id" class="task completed-task">
+                    <div class="task-info">
+                        <span class="task-name">{{ task.name }}</span>
+                        <div class="task-metrics">
+                            <span>Importance: {{ task.importance }}</span>
+                            <span>Urgency: {{ task.urgency }}</span>
+                            <span class="task-done">✓ Completed</span>
+                        </div>
+                    </div>
+                    <button 
+                        class="toggle-done done"
+                        @click="toggleDone(task.id)"
+                    >
+                        Undo
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -298,6 +408,8 @@
             data() {
                 return {
                     tasks: [],
+                    showCompleted: false,
+                    currentTheme: 'default', // Default theme
                     newTask: {
                         name: '',
                         importance: 5,
@@ -305,11 +417,38 @@
                     }
                 }
             },
+            computed: {
+                activeTasks() {
+                    return this.tasks.filter(task => !task.done);
+                },
+                completedTasks() {
+                    return this.tasks.filter(task => task.done);
+                }
+            },
+            watch: {
+                // Save theme preference to localStorage
+                currentTheme(newTheme) {
+                    localStorage.setItem('priority-task-theme', newTheme);
+                    // Update chart colors when theme changes
+                    if (this.taskManager) {
+                        this.taskManager.updateChartColors();
+                    }
+                }
+            },
             mounted() {
+                // Load saved theme from localStorage
+                const savedTheme = localStorage.getItem('priority-task-theme');
+                if (savedTheme) {
+                    this.currentTheme = savedTheme;
+                }
+                
                 this.taskManager = new TaskManager();
                 this.taskManager.onTasksUpdate = (tasks) => {
                     this.tasks = tasks;
                 };
+                
+                // Make taskManager aware of the Vue instance for theme changes
+                this.taskManager.setVueApp(this);
             },
             methods: {
                 addTask() {

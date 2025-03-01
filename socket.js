@@ -8,7 +8,7 @@ const setupSocket = (io) => {
       name: task.name,
       importance: Number(task.importance) || 0,
       urgency: Number(task.urgency) || 0,
-      done: Boolean(task.done),
+      done: task.done === 1 || task.done === true,
       created_at: task.created_at,
     }));
   };

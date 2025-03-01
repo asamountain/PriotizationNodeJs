@@ -1,5 +1,6 @@
 .container {
-  width: 98vw;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 1.1316em;
   box-sizing: border-box;
@@ -84,7 +85,7 @@ input[type="text"] {
 }
 
 .chart-container {
-  width: 600px;
+  width: 100%;
   height: 400px;
   margin: 20px auto;
   padding: 20px;
@@ -92,6 +93,7 @@ input[type="text"] {
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-sizing: border-box;
 }
 
 #priority-chart {
@@ -143,4 +145,180 @@ circle {
   font-weight: bold;
   fill: #333;
   pointer-events: none;
+}
+
+.task-done {
+  color: #4CAF50;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+button.toggle-done.done {
+  background-color: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+/* Tooltip styling for the chart */
+div.tooltip {
+  position: absolute;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  pointer-events: none;
+  z-index: 1000;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Task styling */
+.task {
+  background: white;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-info {
+  flex: 1;
+}
+
+.task-name {
+  font-weight: 600;
+  font-size: 16px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.task-metrics {
+  display: flex;
+  gap: 12px;
+  color: #666;
+  font-size: 14px;
+}
+
+.toggle-done {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #2196F3;
+  background: white;
+  color: #2196F3;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-done:hover {
+  background: #e3f2fd;
+}
+
+/* Task list header styling */
+.task-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.task-list-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.toggle-completed-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #9e9e9e;
+  background: white;
+  color: #616161;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-completed-btn:hover {
+  background: #f5f5f5;
+}
+
+/* Completed tasks section */
+.completed-tasks-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.completed-tasks-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #616161;
+}
+
+.completed-task {
+  opacity: 0.75;
+  background: #f9f9f9;
+}
+
+/* Theme switcher styling */
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+  gap: 0.5rem;
+}
+
+.theme-select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--text-secondary);
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.theme-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Apply theme colors to existing elements */
+.app-title {
+  background: linear-gradient(45deg, var(--primary-color), var(--primary-color));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.btn {
+  background: var(--primary-color);
+}
+
+.toggle-done {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.toggle-done:hover {
+  background: var(--primary-color);
+  color: var(--background-primary);
+}
+
+button.toggle-done.done {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.task-done {
+  color: var(--success-color);
 }

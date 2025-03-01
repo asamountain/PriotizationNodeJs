@@ -59,7 +59,7 @@ class Database {
   async getTaskData() {
     return new Promise((resolve, reject) => {
       this.db.all(
-        "SELECT * FROM tasks WHERE done = 0 ORDER BY importance DESC, urgency DESC",
+        "SELECT * FROM tasks ORDER BY importance DESC, urgency DESC",
         [],
         (err, rows) => {
           if (err) {
