@@ -1,12 +1,4 @@
-<think>The user wants me to create a simple, beginner-friendly README file for their priority task app. This should be extremely accessible even for someone who has never coded before. I'll create a README that:
-
-1. Explains what the app does in simple terms
-2. Provides clear, step-by-step instructions on how to start and use the app
-3. Includes visual cues like emojis to make it more approachable
-4. Avoids technical jargon where possible, and explains it when necessary
-5. Provides troubleshooting help for common issues (like the multiple browser windows issue)
-
-I'll make it friendly and reassuring for complete beginners.</think># Priority Task Manager 📋
+# Priority Task Manager 📋
 
 **Welcome to Priority Task Manager!** This simple app helps you organize your tasks based on their importance and urgency.
 
