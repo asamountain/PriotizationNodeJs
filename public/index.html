@@ -383,111 +383,118 @@
                 Completed: {{ completedTasks.length }}
             </div>
             
-            <!-- Active Tasks -->
-            <div v-for="task in activeTasks" :key="task.id" class="task">
-                <div class="task-info">
-                    <span class="task-name">{{ task.name }}</span>
-                    <div class="task-metrics">
-                        <span>Importance: {{ task.importance }}</span>
-                        <span>Urgency: {{ task.urgency }}</span>
-                        <span v-if="task.done" class="task-done">✓ Completed</span>
+            <!-- Active Tasks with inline subtask forms -->
+            <div v-for="task in activeTasks" :key="task.id" class="task-container">
+                <!-- Main task -->
+                <div class="task">
+                    <div class="task-info">
+                        <span class="task-name">{{ task.name }}</span>
+                        <div class="task-metrics">
+                            <span>Importance: {{ task.importance }}</span>
+                            <span>Urgency: {{ task.urgency }}</span>
+                            <span v-if="task.done" class="task-done">✓ Completed</span>
+                        </div>
+                        
+                        <!-- Subtasks section -->
+                        <div v-if="getSubtasks(task.id).length > 0" class="subtasks-container">
+                            <div class="subtasks-header">
+                                <span>Subtasks:</span>
+                            </div>
+                            <div v-for="subtask in getOrderedSubtasks(task.id)" :key="subtask.id" class="subtask">
+                                <div class="subtask-info">
+                                    <span class="subtask-name">
+                                        <span class="subtask-bullet">•</span> 
+                                        {{ subtask.name }}
+                                    </span>
+                                    <div class="subtask-metrics">
+                                        <span class="subtask-metric">I: {{ subtask.importance }}</span>
+                                        <span class="subtask-metric">U: {{ subtask.urgency }}</span>
+                                        <span v-if="subtask.done" class="task-done">✓</span>
+                                    </div>
+                                </div>
+                                <button 
+                                    class="toggle-done subtask-btn"
+                                    @click="toggleDone(subtask.id)"
+                                    :class="{ done: subtask.done }"
+                                >
+                                    {{ subtask.done ? 'Undo' : 'Done' }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Subtasks section -->
-                    <div v-if="getSubtasks(task.id).length > 0" class="subtasks-container">
-                        <div class="subtasks-header">
-                            <span>Subtasks:</span>
-                        </div>
-                        <div v-for="subtask in getSubtasks(task.id)" :key="subtask.id" class="subtask">
-                            <div class="subtask-info">
-                                <span class="subtask-name">
-                                    <span class="subtask-bullet">•</span> 
-                                    {{ subtask.name }}
-                                </span>
-                                <span v-if="subtask.done" class="task-done">✓</span>
-                            </div>
-                            <button 
-                                class="toggle-done subtask-btn"
-                                @click="toggleDone(subtask.id)"
-                                :class="{ done: subtask.done }"
-                            >
-                                {{ subtask.done ? 'Undo' : 'Done' }}
-                            </button>
-                        </div>
+                    <div class="task-actions">
+                        <button 
+                            class="toggle-done"
+                            @click="toggleDone(task.id)"
+                            :class="{ done: task.done }"
+                        >
+                            {{ task.done ? 'Undo' : 'Done' }}
+                        </button>
+                        <button 
+                            class="add-subtask-btn"
+                            @click="showAddSubtask(task.id)"
+                        >
+                            + Subtask
+                        </button>
                     </div>
                 </div>
                 
-                <div class="task-actions">
-                    <button 
-                        class="toggle-done"
-                        @click="toggleDone(task.id)"
-                        :class="{ done: task.done }"
-                    >
-                        {{ task.done ? 'Undo' : 'Done' }}
-                    </button>
-                    <button 
-                        class="add-subtask-btn"
-                        @click="showAddSubtask(task.id)"
-                    >
-                        + Subtask
-                    </button>
+                <!-- Subtask Form (positioned directly below its parent task) -->
+                <div v-if="showSubtaskForm && selectedTaskId === task.id" class="subtask-form">
+                    <h4>Add Subtask to: {{ task.name }}</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="subtaskName">Subtask Name</label>
+                        <input 
+                            type="text" 
+                            id="subtaskName" 
+                            v-model="newSubtask.name"
+                            class="form-input"
+                            placeholder="Enter subtask name"
+                            required
+                        >
+                    </div>
+
+                    <div class="slider-container">
+                        <div class="slider-group">
+                            <label class="form-label" for="subtaskImportance">
+                                Importance: {{ newSubtask.importance }}
+                            </label>
+                            <input
+                                type="range"
+                                id="subtaskImportance"
+                                v-model.number="newSubtask.importance"
+                                min="0"
+                                max="10"
+                                step="1"
+                            >
+                        </div>
+
+                        <div class="slider-group">
+                            <label class="form-label" for="subtaskUrgency">
+                                Urgency: {{ newSubtask.urgency }}
+                            </label>
+                            <input
+                                type="range"
+                                id="subtaskUrgency"
+                                v-model.number="newSubtask.urgency"
+                                min="0"
+                                max="10"
+                                step="1"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn" @click="addSubtask">Add Subtask</button>
+                        <button type="button" class="btn-secondary" @click="cancelAddSubtask">Cancel</button>
+                    </div>
                 </div>
             </div>
             
             <!-- Message when no active tasks -->
             <div v-if="activeTasks.length === 0" class="no-tasks-message">
                 No active tasks. Add a task to get started!
-            </div>
-            
-            <!-- Subtask Form (conditionally shown) -->
-            <div v-if="showSubtaskForm" class="subtask-form">
-                <h4>Add Subtask to: {{ getTaskName(selectedTaskId) }}</h4>
-                <div class="form-group">
-                    <label class="form-label" for="subtaskName">Subtask Name</label>
-                    <input 
-                        type="text" 
-                        id="subtaskName" 
-                        v-model="newSubtask.name"
-                        class="form-input"
-                        placeholder="Enter subtask name"
-                        required
-                    >
-                </div>
-
-                <div class="slider-container">
-                    <div class="slider-group">
-                        <label class="form-label" for="subtaskImportance">
-                            Importance: {{ newSubtask.importance }}
-                        </label>
-                        <input
-                            type="range"
-                            id="subtaskImportance"
-                            v-model.number="newSubtask.importance"
-                            min="0"
-                            max="10"
-                            step="1"
-                        >
-                    </div>
-
-                    <div class="slider-group">
-                        <label class="form-label" for="subtaskUrgency">
-                            Urgency: {{ newSubtask.urgency }}
-                        </label>
-                        <input
-                            type="range"
-                            id="subtaskUrgency"
-                            v-model.number="newSubtask.urgency"
-                            min="0"
-                            max="10"
-                            step="1"
-                        >
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn" @click="addSubtask">Add Subtask</button>
-                    <button type="button" class="btn-secondary" @click="cancelAddSubtask">Cancel</button>
-                </div>
             </div>
             
             <!-- Completed Tasks Section (conditionally shown) -->
@@ -507,13 +514,17 @@
                             <div class="subtasks-header">
                                 <span>Subtasks:</span>
                             </div>
-                            <div v-for="subtask in getSubtasks(task.id)" :key="subtask.id" class="subtask">
+                            <div v-for="subtask in getOrderedSubtasks(task.id)" :key="subtask.id" class="subtask">
                                 <div class="subtask-info">
                                     <span class="subtask-name">
                                         <span class="subtask-bullet">•</span> 
                                         {{ subtask.name }}
                                     </span>
-                                    <span v-if="subtask.done" class="task-done">✓</span>
+                                    <div class="subtask-metrics">
+                                        <span class="subtask-metric">I: {{ subtask.importance }}</span>
+                                        <span class="subtask-metric">U: {{ subtask.urgency }}</span>
+                                        <span v-if="subtask.done" class="task-done">✓</span>
+                                    </div>
                                 </div>
                                 <button 
                                     class="toggle-done subtask-btn"
@@ -570,6 +581,20 @@
                 getSubtasks() {
                     return (parentId) => {
                         return this.tasks.filter(task => task.parent_id === parentId);
+                    };
+                },
+                getOrderedSubtasks() {
+                    return (parentId) => {
+                        return this.tasks
+                            .filter(task => task.parent_id === parentId)
+                            .sort((a, b) => {
+                                // Order by importance first (descending)
+                                if (b.importance !== a.importance) {
+                                    return b.importance - a.importance;
+                                }
+                                // Then by urgency (descending)
+                                return b.urgency - a.urgency;
+                            });
                     };
                 },
                 getTaskName() {

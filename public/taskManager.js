@@ -363,13 +363,29 @@ export class TaskManager {
             .style('stroke', 'var(--text-primary)')
             .style('stroke-width', 2);
           
-          // Get subtasks for this task
-          const subtasks = tasks.filter(task => task.parent_id === d.id);
+          // Get subtasks for this task and order them by importance and urgency
+          const subtasks = tasks
+              .filter(task => task.parent_id === d.id)
+              .sort((a, b) => {
+                  // Order by importance first (descending)
+                  if (b.importance !== a.importance) {
+                      return b.importance - a.importance;
+                  }
+                  // Then by urgency (descending)
+                  return b.urgency - a.urgency;
+              });
+          
           const subtasksHtml = subtasks.length > 0 
             ? `<div style="margin-top: 8px; border-top: 1px solid var(--text-secondary); padding-top: 5px;">
                 <strong>Subtasks (${subtasks.length}):</strong>
                 <ul style="margin: 5px 0; padding-left: 15px;">
-                  ${subtasks.map(st => `<li>${st.name} ${st.done ? '✓' : ''}</li>`).join('')}
+                  ${subtasks.map(st => `<li>
+                      ${st.name} 
+                      <span style="font-size: 12px; color: var(--text-secondary);">
+                        (I: ${st.importance}, U: ${st.urgency})
+                      </span>
+                      ${st.done ? ' ✓' : ''}
+                    </li>`).join('')}
                 </ul>
               </div>` 
             : '';
