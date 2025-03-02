@@ -776,27 +776,22 @@
             },
             watch: {
                 currentTheme(newTheme) {
+                    console.log('Theme changed to:', newTheme);
                     localStorage.setItem('priority-task-theme', newTheme);
-                    if (this.taskManager) {
-                        this.taskManager.updateChartColors();
-                    }
+                    document.documentElement.setAttribute('data-theme', newTheme); // Apply theme to root
+                    this.taskManager.updateChartColors(); // Update chart colors
                 }
             },
             mounted() {
-                console.log('Vue app mounted');
-                this.taskManager = new TaskManager();
-                
-                this.taskManager.onTasksUpdate = (tasks) => {
-                    console.log('onTasksUpdate called with', tasks.length, 'tasks');
-                    this.tasks = tasks;
-                };
-                
-                this.taskManager.setVueApp(this);
-                
                 const savedTheme = localStorage.getItem('priority-task-theme');
                 if (savedTheme) {
                     this.currentTheme = savedTheme;
+                    document.documentElement.setAttribute('data-theme', savedTheme); // Apply saved theme
                 }
+                this.taskManager = new TaskManager();
+                this.taskManager.onTasksUpdate = (tasks) => {
+                    this.tasks = tasks;
+                };
             },
             methods: {
                 addTask() {

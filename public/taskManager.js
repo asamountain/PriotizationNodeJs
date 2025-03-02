@@ -33,39 +33,48 @@ export class TaskManager {
   // Update chart colors based on current theme
   updateChartColors() {
     if (!this.chartGroup) return;
-    
+
+    console.log("Updating chart colors for theme change");
+
     // Update SVG background and border
-    if (this.svg) {
-      this.svg
-        .style('background', 'var(--background-primary)')
-        .style('border', '1px solid var(--text-secondary)');
-    }
-    
-    // Update axis colors
-    d3.selectAll('.x-axis text, .x-axis line, .x-axis path, .y-axis text, .y-axis line, .y-axis path')
-      .style('color', 'var(--text-secondary)');
-    
+    this.svg
+        .style("background", "var(--background-primary)")
+        .style("border", "1px solid var(--text-secondary)");
+
+    // Update axes with new theme colors
+    this.svg.selectAll(".x-axis text, .x-axis line, .x-axis path, .y-axis text, .y-axis line, .y-axis path")
+        .style("color", "var(--text-secondary)");
+
     // Update axis labels
-    d3.selectAll('.x-label, .y-label')
-      .style('fill', 'var(--text-primary)');
-    
+    this.svg.selectAll(".x-label, .y-label")
+        .style("fill", "var(--text-primary)");
+
     // Update quadrant lines
-    this.chartGroup.selectAll('line')
-      .attr('stroke', 'var(--text-secondary)');
-    
+    this.svg.selectAll("line")
+        .style("stroke", "var(--text-secondary)");
+
     // Update quadrant labels
-    const quadrantLabels = this.chartGroup.selectAll('text');
+    const quadrantLabels = this.svg.selectAll("text");
     quadrantLabels.each(function(d, i) {
-      const label = d3.select(this);
-      if (i === 0) label.style('fill', 'var(--q1-color)'); // Do First
-      else if (i === 1) label.style('fill', 'var(--q2-color)'); // Schedule
-      else if (i === 2) label.style('fill', 'var(--q3-color)'); // Delegate
-      else if (i === 3) label.style('fill', 'var(--q4-color)'); // Don't Do
+        const label = d3.select(this);
+        if (label.text() === "Do First") label.style("fill", "var(--q1-color)");
+        else if (label.text() === "Schedule") label.style("fill", "var(--q2-color)");
+        else if (label.text() === "Delegate") label.style("fill", "var(--q3-color)");
+        else if (label.text() === "Don't Do") label.style("fill", "var(--q4-color)");
     });
-    
-    // Re-render with current data if available
+
+    // Update circles (task dots)
+    this.svg.selectAll("circle")
+        .style("fill", d => {
+            if (d.importance >= 5 && d.urgency >= 5) return "var(--q1-color)";  // Do First
+            if (d.importance >= 5 && d.urgency < 5) return "var(--q2-color)";   // Schedule
+            if (d.importance < 5 && d.urgency >= 5) return "var(--q3-color)";   // Delegate
+            return "var(--q4-color)";  // Don't Do
+        });
+
+    // Force a re-render of the chart
     if (this._lastData) {
-      this.renderChart(this._lastData);
+        this.renderChart(this._lastData);
     }
   }
 
