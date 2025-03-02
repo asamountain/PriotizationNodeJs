@@ -7,4 +7,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
 # Start the server
-node server.js 
+node server.js
+
+# The browser opening should now be handled inside server.js
+# If there's a line like this, remove it:
+# open "http://localhost:3000"

@@ -30,8 +30,36 @@ app.get("/", (req, res) => {
 const startServer = async (port = 3000) => {
     try {
         await initDatabase();
-        server.listen(port, () => {
+        server.listen(port, async () => {
             console.log(`Server started on port ${port}`);
+            
+            // Use child_process instead of the open package
+            if (process.env.NODE_ENV !== 'production') {
+                const { exec } = await import('child_process');
+                const url = `http://localhost:${port}`;
+                console.log(`Opening browser at ${url}`);
+                
+                // Determine the command based on the operating system
+                let command;
+                switch (process.platform) {
+                    case 'darwin':  // macOS
+                        command = `open "${url}"`;
+                        break;
+                    case 'win32':   // Windows
+                        command = `start "" "${url}"`;
+                        break;
+                    default:        // Linux and others
+                        command = `xdg-open "${url}"`;
+                        break;
+                }
+                
+                // Execute the command and handle errors
+                exec(command, (error) => {
+                    if (error) {
+                        console.error('Error opening browser:', error);
+                    }
+                });
+            }
         });
     } catch (error) {
         console.error("Server startup failed:", error);
