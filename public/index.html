@@ -296,6 +296,81 @@
             border-radius: 8px;
             font-style: italic;
         }
+
+        /* Edit button and modal styling */
+        .subtask-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .edit-subtask-btn {
+            padding: 3px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid var(--text-secondary);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-subtask-btn:hover {
+            background: var(--background-secondary);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .edit-icon {
+            font-size: 14px;
+        }
+
+        /* Modal styling */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .edit-modal-content {
+            background: var(--background-primary);
+            border-radius: 8px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--text-secondary);
+            background-color: var(--background-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -412,13 +487,22 @@
                                         <span v-if="subtask.done" class="task-done">✓</span>
                                     </div>
                                 </div>
-                                <button 
-                                    class="toggle-done subtask-btn"
-                                    @click="toggleDone(subtask.id)"
-                                    :class="{ done: subtask.done }"
-                                >
-                                    {{ subtask.done ? 'Undo' : 'Done' }}
-                                </button>
+                                <div class="subtask-actions">
+                                    <button 
+                                        class="toggle-done subtask-btn"
+                                        @click="toggleDone(subtask.id)"
+                                        :class="{ done: subtask.done }"
+                                    >
+                                        {{ subtask.done ? 'Undo' : 'Done' }}
+                                    </button>
+                                    <button 
+                                        class="edit-subtask-btn"
+                                        @click="editSubtask(subtask)"
+                                        title="Edit subtask"
+                                    >
+                                        <span class="edit-icon">✎</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -545,6 +629,76 @@
                 </div>
             </div>
         </div>
+
+        <!-- Add this outside the task list to create a modal edit form -->
+        <div v-if="showEditForm" class="edit-modal">
+            <div class="edit-modal-content">
+                <h4>Edit Subtask</h4>
+                <div class="form-group">
+                    <label class="form-label" for="editSubtaskName">Subtask Name</label>
+                    <input 
+                        type="text" 
+                        id="editSubtaskName" 
+                        v-model="editingSubtask.name"
+                        class="form-input"
+                        placeholder="Enter subtask name"
+                        required
+                    >
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-group">
+                        <label class="form-label" for="editSubtaskImportance">
+                            Importance: {{ editingSubtask.importance }}
+                        </label>
+                        <input
+                            type="range"
+                            id="editSubtaskImportance"
+                            v-model.number="editingSubtask.importance"
+                            min="0"
+                            max="10"
+                            step="1"
+                        >
+                    </div>
+
+                    <div class="slider-group">
+                        <label class="form-label" for="editSubtaskUrgency">
+                            Urgency: {{ editingSubtask.urgency }}
+                        </label>
+                        <input
+                            type="range"
+                            id="editSubtaskUrgency"
+                            v-model.number="editingSubtask.urgency"
+                            min="0"
+                            max="10"
+                            step="1"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editSubtaskParent">Parent Task (Active Only)</label>
+                    <select 
+                        id="editSubtaskParent" 
+                        v-model="editingSubtask.parent_id"
+                        class="form-select"
+                    >
+                        <option v-for="parentTask in possibleParents" :key="parentTask.id" :value="parentTask.id">
+                            {{ parentTask.name }}
+                        </option>
+                    </select>
+                    <!-- Add a message if no active parents are available -->
+                    <div v-if="possibleParents.length === 0" class="form-help-text">
+                        No active parent tasks available. Please create a new active task first.
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn" @click="saveSubtaskEdit">Save Changes</button>
+                    <button type="button" class="btn-secondary" @click="cancelEdit">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
@@ -568,7 +722,16 @@
                         urgency: 5
                     },
                     selectedTaskId: null,
-                    showSubtaskForm: false
+                    showSubtaskForm: false,
+                    showEditForm: false,
+                    editingSubtask: {
+                        id: null,
+                        name: '',
+                        importance: 5,
+                        urgency: 5,
+                        parent_id: null,
+                        originalParentId: null
+                    }
                 }
             },
             computed: {
@@ -602,6 +765,13 @@
                         const task = this.tasks.find(task => task.id === taskId);
                         return task ? task.name : '';
                     };
+                },
+                possibleParents() {
+                    return this.tasks.filter(task => 
+                        task.parent_id === null && 
+                        task.id !== this.editingSubtask.id &&
+                        task.done === false
+                    );
                 }
             },
             watch: {
@@ -667,6 +837,53 @@
                 cancelAddSubtask() {
                     this.showSubtaskForm = false;
                     this.selectedTaskId = null;
+                },
+                editSubtask(subtask) {
+                    console.log('Editing subtask:', subtask);
+                    this.editingSubtask = {
+                        id: subtask.id,
+                        name: subtask.name,
+                        importance: subtask.importance,
+                        urgency: subtask.urgency,
+                        parent_id: subtask.parent_id,
+                        originalParentId: subtask.parent_id
+                    };
+                    this.showEditForm = true;
+                    
+                    // Debug logging to check filtering
+                    console.log('All tasks:', this.tasks.length);
+                    console.log('Main tasks:', this.tasks.filter(t => t.parent_id === null).length);
+                    console.log('Active main tasks:', this.tasks.filter(t => t.parent_id === null && !t.done).length);
+                    console.log('Possible parents:', this.possibleParents.length);
+                    console.log('Completed tasks:', this.tasks.filter(t => t.done).length);
+                },
+                saveSubtaskEdit() {
+                    if (!this.editingSubtask.name) {
+                        alert('Subtask name cannot be empty');
+                        return;
+                    }
+                    
+                    const updatedSubtask = {
+                        id: this.editingSubtask.id,
+                        name: this.editingSubtask.name,
+                        importance: this.editingSubtask.importance,
+                        urgency: this.editingSubtask.urgency,
+                        parent_id: this.editingSubtask.parent_id
+                    };
+                    
+                    this.taskManager.updateSubtask(updatedSubtask);
+                    this.showEditForm = false;
+                },
+                cancelEdit() {
+                    this.showEditForm = false;
+                    this.editingSubtask = {
+                        id: null,
+                        name: '',
+                        importance: 5,
+                        urgency: 5,
+                        parent_id: null,
+                        originalParentId: null
+                    };
                 }
             }
         }).mount('#app')

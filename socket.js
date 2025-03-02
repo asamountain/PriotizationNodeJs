@@ -9,7 +9,7 @@ const setupSocket = (io) => {
       name: task.name,
       importance: Number(task.importance) || 0,
       urgency: Number(task.urgency) || 0,
-      done: task.done === 1 || task.done === true,
+      done: task.done === 1 || task.done === true || task.done === "true",
       created_at: task.created_at,
       parent_id: task.parent_id
     }));
@@ -99,6 +99,19 @@ const setupSocket = (io) => {
         io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         console.error("Failed to add subtask:", error);
+      }
+    });
+
+    socket.on("updateSubtask", async ({ subtask }) => {
+      try {
+        console.log("Updating subtask:", subtask);
+        await database.updateSubtask(subtask);
+        console.log("Subtask updated successfully");
+
+        const data = await getTaskData();
+        io.emit("updateTasks", { data: processTaskData(data) });
+      } catch (error) {
+        console.error("Failed to update subtask:", error);
       }
     });
 

@@ -490,4 +490,9 @@ export class TaskManager {
     console.log('TaskManager.addSubtask called with:', subtask, 'parentId:', parentId);
     this.socket.emit('addSubtask', { subtask, parentId });
   }
+
+  updateSubtask(subtask) {
+    console.log('TaskManager.updateSubtask called with:', subtask);
+    this.socket.emit('updateSubtask', { subtask });
+  }
 }
