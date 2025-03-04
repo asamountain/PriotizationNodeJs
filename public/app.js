@@ -9,64 +9,55 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = window.Vue.createApp({
     data() {
       return {
-        // Task data
+        // Tasks data
         tasks: [],
         activeTasks: [],
         completedTasks: [],
-        selectedTaskId: null,
-        
-        // Form fields
         taskName: '',
         taskImportance: 5,
         taskUrgency: 5,
+        selectedTaskId: null,
         
-        // New properties to fix errors
-        showStatsView: false,
-        newTask: {
-          name: '',
-          importance: 5,
-          urgency: 5,
-          due_date: null
-        },
-        
-        // UI states
-        isDarkTheme: localStorage.getItem('darkTheme') === 'true' || false,
-        showCompletedTasks: false,
-        showCompletedSubtasks: localStorage.getItem('showCompletedSubtasks') === 'true' || false,
+        // UI state
+        isDarkTheme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
+        showCompletedSubtasks: false,
         taskSectionOpen: {
           active: true,
-          completed: false
+          completed: true
         },
+        
+        // Stats data
+        showStatsView: false,
+        theme: 'light',
+        quadrantStats: { q1: 0, q2: 0, q3: 0, q4: 0 },
         
         // Subtask modal
         showSubtaskModal: false,
+        selectedParentId: null,
         newSubtask: {
           name: '',
           importance: 5,
           urgency: 5,
-          due_date: null,
-          parent_id: null
+          due_date: ''
         },
         
-        // Edit task/subtask
+        // Edit modal
         showEditForm: false,
         editingSubtask: {
           id: null,
           name: '',
           importance: 5,
           urgency: 5,
-          parent_id: null,
-          originalParentId: null
+          parent_id: null
         },
         
-        // Stats data
-        quadrantStats: { q1: 0, q2: 0, q3: 0, q4: 0 },
-        tasksByQuadrant: {},
-        quadrantLabels: {
-          q1: 'Do First',
-          q2: 'Schedule',
-          q3: 'Delegate',
-          q4: 'Don\'t Do'
+        // New properties to fix errors
+        showCompletedTasks: false,
+        newTask: {
+          name: '',
+          importance: 5,
+          urgency: 5,
+          due_date: null
         },
         
         // Computed properties for templates
@@ -77,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
     computed: {
       currentTheme() {
         return this.isDarkTheme ? 'dark' : 'light';
+      },
+      hasCompletedTasks() {
+        return this.completedTasks && this.completedTasks.length > 0;
       }
     },
     methods: {

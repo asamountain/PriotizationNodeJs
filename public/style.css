@@ -64,8 +64,13 @@ body {
 
 .container {
     max-width: 1200px;
+    width: 95%;
     margin: 0 auto;
     padding: 20px;
+    color: var(--text-primary);
+    background-color: var(--background-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
 }
 
 /* Header styles */
@@ -84,13 +89,15 @@ h1 {
 /* Task form styles */
 .task-form {
     margin-bottom: 2.5rem;
-    background: var(--surface-color);
+    background: var(--background-primary);
     padding: 1.5rem;
-    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 }
 
 .dark-theme .task-form {
-    border: 1px solid #333;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .form-title {
@@ -170,10 +177,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
 }
 
 .btn:hover {
     background: var(--primary-color-light);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary {
@@ -188,11 +205,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .btn-secondary {
     background-color: rgba(0, 0, 0, 0.05);
     color: var(--text-secondary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .dark-theme .btn-secondary {
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--dark-text-secondary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .btn-secondary:hover {
@@ -203,7 +222,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .task-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 2rem;
+    border-spacing: 0;
+    margin-bottom: 20px;
 }
 
 .task-table th {
@@ -220,12 +240,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .task-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
 }
 
 .dark-theme .task-table td {
-    border-bottom: 1px solid #333;
+    border-bottom-color: var(--dark-border-color);
 }
 
 .task {
@@ -249,35 +270,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .task-info {
+    width: 85%;
+    min-width: 300px;
+    vertical-align: middle;
+}
+
+.task-info-content {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.task-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    background-color: var(--background-secondary);
-    color: var(--text-secondary);
-    cursor: pointer;
-    border: 1px solid #e0e0e0;
-}
-
-.dark-theme .task-status {
-    border: 1px solid #555;
-}
-
-.task-status.done {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+    flex: 1;
+    align-items: flex-start;
 }
 
 .task-name-container {
+    flex: 1;
+    margin-left: 10px;
     display: flex;
     flex-direction: column;
 }
@@ -298,9 +304,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .task-metrics {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+    width: 15%;
+    text-align: right;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .task-metric {
@@ -359,17 +366,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .subtask-info {
     display: flex;
     align-items: center;
+    width: 100%;
+    min-width: 300px;
 }
 
 .subtask-content {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
     width: 100%;
 }
 
 .subtask-name {
     font-size: 0.9rem;
+    margin-left: 5px;
 }
 
 .subtask-name.completed {
@@ -381,13 +391,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: color 0.2s ease;
+    transition: all 0.2s ease;
     border: 1px solid currentColor;
-    border-radius: 3px;
+    border-radius: 4px;
+    margin-right: 6px;
 }
 
 .subtask-status:hover {
@@ -459,16 +470,21 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* Priority chart styles */
 .chart-container {
-    margin-top: 1.5rem;
     position: relative;
-    height: 520px;
+    width: 80%;
+    height: 80vh;
+    min-height: 400px;
+    max-height: 800px;
+    background: var(--background-primary);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin: 0 auto 20px;
     overflow: hidden;
-    border: 1px solid #e0e0e0;
-    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
 }
 
 .dark-theme .chart-container {
-    border: 1px solid #333;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .priority-chart {
@@ -667,11 +683,18 @@ input[type="range"]::-webkit-slider-thumb:hover {
     visibility: hidden;
     opacity: 0;
     border-left: 4px solid var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .chart-tooltip.visible {
     visibility: visible;
     opacity: 1;
+}
+
+/* Add margin to bottom-positioned tooltips */
+.chart-tooltip[style*="transform: translate(-50%, 0)"] {
+    margin-top: 10px;
 }
 
 .tooltip-header {
@@ -746,12 +769,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
     }
     
     .chart-container {
-        height: 400px;
+        width: 90%;
+        height: 70vh;
+        min-height: 350px;
     }
 }
 
 @media (max-width: 480px) {
     .container {
+        width: 100%;
         padding: 10px;
     }
     
@@ -760,10 +786,119 @@ input[type="range"]::-webkit-slider-thumb:hover {
     }
     
     .chart-container {
-        height: 300px;
+        width: 95%;
+        height: 60vh;
+        min-height: 300px;
     }
     
     .notification {
         max-width: 90%;
     }
+}
+
+/* For very large screens, prevent the chart from getting too large */
+@media (min-width: 1600px) {
+    .chart-container {
+        max-width: 1280px;
+    }
+}
+
+/* New Metrics Gauges Styles */
+.metrics-gauges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.metric-gauge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gauge-label {
+  min-width: 70px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.gauge-container {
+  position: relative;
+  height: 12px;
+  background-color: #eee;
+  border-radius: 6px;
+  flex-grow: 1;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.dark-theme .gauge-container {
+  background-color: #444;
+}
+
+.gauge-bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.gauge-value {
+  position: absolute;
+  right: 6px;
+  top: -1px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+/* Subtask specific gauge styles */
+.subtask-gauges {
+  display: flex;
+  flex-direction: row;
+  margin-top: 8px;
+  gap: 12px;
+  width: 100%;
+  margin-left: 28px;
+}
+
+.subtask-gauges .metric-gauge {
+  flex-grow: 1;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.subtask-gauges .gauge-label {
+  min-width: 18px;
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.subtask-gauges .gauge-container {
+  height: 10px;
+  background-color: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark-theme .subtask-gauges .gauge-container {
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.subtask-gauges .gauge-bar {
+  border-radius: 5px;
+  transition: width 0.4s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.subtask-gauges .gauge-value {
+  color: var(--text-primary);
+  text-shadow: none;
+  font-size: 10px;
+  font-weight: 600;
+  right: 2px;
 }

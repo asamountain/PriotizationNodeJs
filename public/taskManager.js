@@ -202,156 +202,61 @@ export class TaskManager {
     chartBackground.setAttribute('height', chartHeight);
     chartBackground.setAttribute('rx', '12'); // More rounded corners
     chartBackground.setAttribute('ry', '12');
-    chartBackground.setAttribute('fill', this.isDarkTheme ? 'rgba(30, 30, 30, 0.2)' : 'rgba(248, 249, 250, 0.7)');
-    chartBackground.setAttribute('stroke', this.isDarkTheme ? '#444' : '#ddd');
+    chartBackground.setAttribute('fill', this.isDarkTheme ? 'rgba(40, 44, 52, 0.8)' : 'rgba(245, 245, 245, 0.8)');
+    chartBackground.setAttribute('stroke', this.isDarkTheme ? 'rgba(100, 100, 100, 0.3)' : 'rgba(200, 200, 200, 0.8)');
     chartBackground.setAttribute('stroke-width', '1');
     this.chartGroup.appendChild(chartBackground);
     
-    // Add X and Y axes
-    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    xAxis.setAttribute('x1', '0');
-    xAxis.setAttribute('y1', `${chartHeight}`);
-    xAxis.setAttribute('x2', `${chartWidth}`);
-    xAxis.setAttribute('y2', `${chartHeight}`);
-    xAxis.setAttribute('stroke', this.isDarkTheme ? '#777' : '#999');
-    xAxis.setAttribute('stroke-width', '2');
-    this.chartGroup.appendChild(xAxis);
-    
-    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    yAxis.setAttribute('x1', '0');
-    yAxis.setAttribute('y1', '0');
-    yAxis.setAttribute('x2', '0');
-    yAxis.setAttribute('y2', `${chartHeight}`);
-    yAxis.setAttribute('stroke', this.isDarkTheme ? '#777' : '#999');
-    yAxis.setAttribute('stroke-width', '2');
-    this.chartGroup.appendChild(yAxis);
-    
-    // Add X and Y labels
-    const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    xLabel.setAttribute('x', `${chartWidth / 2}`);
-    xLabel.setAttribute('y', `${chartHeight + 35}`); // Moved down to avoid overlap
-    xLabel.setAttribute('text-anchor', 'middle');
-    xLabel.setAttribute('fill', this.isDarkTheme ? '#DDD' : '#333');
-    xLabel.setAttribute('font-size', '16px'); // Larger font
-    xLabel.setAttribute('font-weight', '500'); // Slightly bolder
-    xLabel.textContent = 'Urgency';
-    this.chartGroup.appendChild(xLabel);
-    
-    // Add X axis ticks with more values for better reference
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].forEach((label, i) => {
-      const x = (i / 9) * chartWidth;
-      const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      tickLine.setAttribute('x1', x);
-      tickLine.setAttribute('y1', chartHeight);
-      tickLine.setAttribute('x2', x);
-      tickLine.setAttribute('y2', chartHeight + 5);
-      tickLine.setAttribute('stroke', this.isDarkTheme ? '#777' : '#999');
-      tickLine.setAttribute('stroke-width', '1');
-      
-      // Only show every other tick label on smaller screens
-      if (i % 2 === 0 || containerWidth > 600) {
-        const tickText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        tickText.setAttribute('x', x);
-        tickText.setAttribute('y', chartHeight + 20);
-        tickText.setAttribute('text-anchor', 'middle');
-        tickText.setAttribute('fill', this.isDarkTheme ? '#BBB' : '#666');
-        tickText.setAttribute('font-size', '12px');
-        tickText.textContent = label;
-        this.chartGroup.appendChild(tickText);
-      }
-      
-      this.chartGroup.appendChild(tickLine);
-    });
-    
-    // Add more descriptive low/high labels
-    ['Low Urgency', 'High Urgency'].forEach((label, i) => {
-      const x = i === 0 ? 5 : chartWidth - 5;
-      const tickText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tickText.setAttribute('x', x);
-      tickText.setAttribute('y', chartHeight + 35);
-      tickText.setAttribute('text-anchor', i === 0 ? 'start' : 'end');
-      tickText.setAttribute('fill', this.isDarkTheme ? '#BBB' : '#666');
-      tickText.setAttribute('font-size', '13px');
-      tickText.setAttribute('font-style', 'italic');
-      tickText.textContent = label;
-      this.chartGroup.appendChild(tickText);
-    });
-    
-    const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    yLabel.setAttribute('transform', `rotate(-90, -40, ${chartHeight / 2})`);
-    yLabel.setAttribute('x', `-40`);
-    yLabel.setAttribute('y', `${chartHeight / 2}`);
-    yLabel.setAttribute('text-anchor', 'middle');
-    yLabel.setAttribute('fill', this.isDarkTheme ? '#DDD' : '#333');
-    yLabel.setAttribute('font-size', '16px'); // Larger font
-    yLabel.setAttribute('font-weight', '500'); // Slightly bolder
-    yLabel.textContent = 'Importance';
-    this.chartGroup.appendChild(yLabel);
-    
-    // Add Y axis ticks with more values for better reference
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].forEach((label, i) => {
-      const y = chartHeight - (i / 9) * chartHeight;
-      const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      tickLine.setAttribute('x1', -5);
-      tickLine.setAttribute('y1', y);
-      tickLine.setAttribute('x2', 0);
-      tickLine.setAttribute('y2', y);
-      tickLine.setAttribute('stroke', this.isDarkTheme ? '#777' : '#999');
-      tickLine.setAttribute('stroke-width', '1');
-      
-      // Only show every other tick label on smaller screens
-      if (i % 2 === 0 || containerHeight > 400) {
-        const tickText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        tickText.setAttribute('x', -10);
-        tickText.setAttribute('y', y + 4); // Offset for centering text
-        tickText.setAttribute('text-anchor', 'end');
-        tickText.setAttribute('fill', this.isDarkTheme ? '#BBB' : '#666');
-        tickText.setAttribute('font-size', '12px');
-        tickText.textContent = label;
-        this.chartGroup.appendChild(tickText);
-      }
-      
-      this.chartGroup.appendChild(tickLine);
-    });
-    
-    // Add more descriptive low/high labels
-    ['Low Importance', 'High Importance'].forEach((label, i) => {
-      const y = i === 0 ? chartHeight - 5 : 15;
-      const tickText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tickText.setAttribute('x', -15);
-      tickText.setAttribute('y', y);
-      tickText.setAttribute('text-anchor', 'end');
-      tickText.setAttribute('alignment-baseline', i === 0 ? 'auto' : 'hanging');
-      tickText.setAttribute('fill', this.isDarkTheme ? '#BBB' : '#666');
-      tickText.setAttribute('font-size', '13px');
-      tickText.setAttribute('font-style', 'italic');
-      tickText.textContent = label;
-      this.chartGroup.appendChild(tickText);
-    });
-    
-    // Add quadrant lines and labels
+    // Calculate midpoints for quadrant division
     const midX = chartWidth / 2;
     const midY = chartHeight / 2;
     
-    const horizontalMidLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    horizontalMidLine.setAttribute('x1', '0');
-    horizontalMidLine.setAttribute('y1', `${midY}`);
-    horizontalMidLine.setAttribute('x2', `${chartWidth}`);
-    horizontalMidLine.setAttribute('y2', `${midY}`);
-    horizontalMidLine.setAttribute('stroke', this.isDarkTheme ? '#555' : '#ccc');
-    horizontalMidLine.setAttribute('stroke-width', '1');
-    horizontalMidLine.setAttribute('stroke-dasharray', '5,5');
-    this.chartGroup.appendChild(horizontalMidLine);
+    // Add the main quadrant lines with improved styling
+    // Horizontal quadrant line
+    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    hLine.setAttribute('x1', 0);
+    hLine.setAttribute('y1', midY);
+    hLine.setAttribute('x2', chartWidth);
+    hLine.setAttribute('y2', midY);
+    hLine.setAttribute('stroke', this.isDarkTheme ? 'rgba(180, 180, 180, 0.4)' : 'rgba(120, 120, 120, 0.4)');
+    hLine.setAttribute('stroke-width', '2');
+    hLine.setAttribute('stroke-dasharray', '5,3');
+    this.chartGroup.appendChild(hLine);
     
-    const verticalMidLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    verticalMidLine.setAttribute('x1', `${midX}`);
-    verticalMidLine.setAttribute('y1', '0');
-    verticalMidLine.setAttribute('x2', `${midX}`);
-    verticalMidLine.setAttribute('y2', `${chartHeight}`);
-    verticalMidLine.setAttribute('stroke', this.isDarkTheme ? '#555' : '#ccc');
-    verticalMidLine.setAttribute('stroke-width', '1');
-    verticalMidLine.setAttribute('stroke-dasharray', '5,5');
-    this.chartGroup.appendChild(verticalMidLine);
+    // Vertical quadrant line
+    const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    vLine.setAttribute('x1', midX);
+    vLine.setAttribute('y1', 0);
+    vLine.setAttribute('x2', midX);
+    vLine.setAttribute('y2', chartHeight);
+    vLine.setAttribute('stroke', this.isDarkTheme ? 'rgba(180, 180, 180, 0.4)' : 'rgba(120, 120, 120, 0.4)');
+    vLine.setAttribute('stroke-width', '2');
+    vLine.setAttribute('stroke-dasharray', '5,3');
+    this.chartGroup.appendChild(vLine);
+    
+    // Add axis labels with improved styling and positioning
+    // X-axis (Urgency)
+    const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    xAxisLabel.setAttribute('x', chartWidth / 2);
+    xAxisLabel.setAttribute('y', chartHeight + 30);
+    xAxisLabel.setAttribute('text-anchor', 'middle');
+    xAxisLabel.setAttribute('fill', this.isDarkTheme ? '#ccc' : '#444');
+    xAxisLabel.setAttribute('font-family', 'Roboto, Arial, sans-serif');
+    xAxisLabel.setAttribute('font-size', '14px');
+    xAxisLabel.setAttribute('font-weight', '500');
+    xAxisLabel.textContent = 'URGENCY';
+    this.chartGroup.appendChild(xAxisLabel);
+    
+    // Y-axis (Importance)
+    const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    yAxisLabel.setAttribute('transform', `translate(-35, ${chartHeight / 2}) rotate(-90)`);
+    yAxisLabel.setAttribute('text-anchor', 'middle');
+    yAxisLabel.setAttribute('fill', this.isDarkTheme ? '#ccc' : '#444');
+    yAxisLabel.setAttribute('font-family', 'Roboto, Arial, sans-serif');
+    yAxisLabel.setAttribute('font-size', '14px');
+    yAxisLabel.setAttribute('font-weight', '500');
+    yAxisLabel.textContent = 'IMPORTANCE';
+    this.chartGroup.appendChild(yAxisLabel);
     
     // Add grid lines
     for (let i = 1; i < 10; i++) {
@@ -380,20 +285,35 @@ export class TaskManager {
       }
     }
     
-    // Add quadrant labels with improved positioning and larger size
-    this.addQuadrantLabel('Q1', midX / 2, midY / 2, 'Urgent & Important');
-    this.addQuadrantLabel('Q2', midX + midX / 2, midY / 2, 'Important, Not Urgent');
-    this.addQuadrantLabel('Q3', midX / 2, midY + midY / 2, 'Urgent, Not Important');
-    this.addQuadrantLabel('Q4', midX + midX / 2, midY + midY / 2, 'Neither Urgent nor Important');
-    
     // Create a group specifically for task dots
     this.dotsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     this.dotsGroup.classList.add('task-dots');
     this.chartGroup.appendChild(this.dotsGroup);
     
+    // Create a group for annotations that will always be visible
+    this.annotationsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    this.annotationsGroup.classList.add('task-annotations');
+    this.chartGroup.appendChild(this.annotationsGroup);
+    
     // Store chart dimensions for later use
     this.chartWidth = chartWidth;
     this.chartHeight = chartHeight;
+    
+    // Add quadrant labels
+    const quarterWidth = chartWidth / 4;
+    const quarterHeight = chartHeight / 4;
+    
+    // Q1: Important & Urgent (top right)
+    this.addQuadrantLabel('Q1', midX + quarterWidth, midY - quarterHeight, 'Important & Urgent');
+    
+    // Q2: Important & Not Urgent (top left)
+    this.addQuadrantLabel('Q2', midX - quarterWidth, midY - quarterHeight, 'Important & Not Urgent');
+    
+    // Q3: Not Important & Urgent (bottom right)
+    this.addQuadrantLabel('Q3', midX + quarterWidth, midY + quarterHeight, 'Not Important & Urgent');
+    
+    // Q4: Not Important & Not Urgent (bottom left)
+    this.addQuadrantLabel('Q4', midX - quarterWidth, midY + quarterHeight, 'Not Important & Not Urgent');
   }
   
   initializeCompletionChart() {
@@ -623,52 +543,68 @@ export class TaskManager {
       labelGroup.appendChild(descText);
     }
     
-    // Add a subtle hover effect
-    labelGroup.addEventListener('mouseenter', () => {
-      bgRect.setAttribute('stroke-width', '3');
-      bgRect.setAttribute('fill', this.isDarkTheme ? 'rgba(40, 40, 40, 0.9)' : 'rgba(255, 255, 255, 1)');
-      label.setAttribute('font-size', '19px');
-    });
+    // Add the label group to the annotations group
+    if (this.annotationsGroup) {
+      this.annotationsGroup.appendChild(labelGroup);
+    } else {
+      console.error('Cannot add quadrant label: annotations group not available');
+      if (this.chartGroup) {
+        this.chartGroup.appendChild(labelGroup);
+      }
+    }
     
-    labelGroup.addEventListener('mouseleave', () => {
-      bgRect.setAttribute('stroke-width', '2');
-      bgRect.setAttribute('fill', this.isDarkTheme ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.9)');
-      label.setAttribute('font-size', '18px');
-    });
-    
-    this.chartGroup.appendChild(labelGroup);
     return labelGroup;
   }
 
   handleData(data) {
-    if (!data || !Array.isArray(data.data)) {
-      console.error('Invalid data received:', data);
-      return;
-    }
+    console.log('Received data from server:', data);
     
-    try {
-      console.log('Received data:', data.data);
-      
+    // Check if data has the expected structure
+    const taskData = data && data.data ? data.data : data;
+    
+    // Update the internal tasks array
+    if (taskData && Array.isArray(taskData)) {
       // Store data for resize events
-      this._lastData = data.data;
+      this._lastData = taskData;
       
-      // IMPORTANT: Update the tasks property to fix issue #2
-      this.tasks = data.data;
+      // Update the internal tasks array
+      this.tasks = taskData;
       
-      // Call the Vue callback if it exists
-      if (this.onTasksUpdate && typeof this.onTasksUpdate === 'function') {
-        console.log('Calling Vue callback with data:', data.data.length, 'tasks');
-        this.onTasksUpdate(data.data);
+      // Filter active and completed tasks
+      const activeTasks = taskData.filter(task => !task.done && !task.parent_id);
+      const completedTasks = taskData.filter(task => task.done && !task.parent_id);
+      
+      // Calculate quadrant statistics
+      this.calculateQuadrantStats(activeTasks);
+      
+      // Update the chart
+      this.renderChart(taskData);
+      
+      // If Vue app is available, update its data
+      if (this.vueApp) {
+        try {
+          // Check if Vue app and required methods are available
+          if (typeof this.vueApp.$data !== 'undefined') {
+            this.vueApp.tasks = taskData;
+            this.vueApp.activeTasks = activeTasks;
+            this.vueApp.completedTasks = completedTasks;
+            
+            // Also update quadrant stats if available
+            if (this.quadrantStats && this.vueApp.quadrantStats) {
+              this.vueApp.quadrantStats = { ...this.quadrantStats };
+            }
+          } else {
+            console.log('Vue app data not available yet');
+          }
+        } catch (error) {
+          console.error('Error updating Vue data:', error);
+        }
       } else {
-        console.warn('Vue callback not available');
-        // Emit update event even if callback is not set
+        // Emit update event even if Vue app is not set
         this.emitUpdate();
       }
-      
-      // Render the chart with the new data
-      this.renderChart();
-    } catch (error) {
-      console.error('Data rendering error:', error);
+    } else {
+      console.error('Invalid data received from server:', data);
     }
   }
 
@@ -690,7 +626,7 @@ export class TaskManager {
     const mainTasks = tasksToRender.filter(task => !task.done && !task.parent_id);
     console.log(`Rendering ${mainTasks.length} tasks on chart`);
     
-    // Clear existing dots and annotations
+    // Clear existing dots
     if (this.dotsGroup) {
       this.dotsGroup.innerHTML = '';
     } else {
@@ -700,13 +636,11 @@ export class TaskManager {
       this.chartGroup.appendChild(this.dotsGroup);
     }
     
-    // Clear and recreate annotations group
+    // Remove any existing annotations group
     if (this.annotationsGroup) {
-      this.annotationsGroup.innerHTML = '';
-    } else {
-      this.annotationsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      this.annotationsGroup.classList.add('task-annotations');
-      this.chartGroup.appendChild(this.annotationsGroup);
+      this.annotationsGroup.remove();
+      this.annotationsGroup = null;
+      this.taskAnnotations = {};
     }
     
     // Track positions of each task dot for overlap detection
@@ -741,236 +675,7 @@ export class TaskManager {
         
         // Add to the dots group
         this.dotsGroup.appendChild(dot);
-        
-        // Create annotation for subtasks
-        this.createTaskAnnotation(task, adjustedX, adjustedY, dotSize);
     });
-  }
-  
-  // New function to create annotations for subtasks
-  createTaskAnnotation(task, x, y, dotSize) {
-    // Get the subtasks for this task
-    const subtasks = this.tasks ? this.tasks.filter(t => t.parent_id === task.id) : [];
-    
-    // If there are no subtasks, don't create an annotation
-    if (!subtasks || subtasks.length === 0) {
-      return;
-    }
-    
-    // Create a group for the annotation
-    const annotationGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    annotationGroup.classList.add('task-annotation');
-    annotationGroup.setAttribute('data-parent-id', task.id);
-    // Hide annotation by default
-    annotationGroup.style.opacity = '0';
-    annotationGroup.style.visibility = 'hidden';
-    
-    // Create background rectangle for the annotation
-    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    
-    // Create text element for the annotation
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', x + dotSize + 5);
-    text.setAttribute('y', y - dotSize);
-    text.setAttribute('fill', '#333');
-    text.setAttribute('font-size', '12px');
-    text.setAttribute('font-weight', 'bold');
-    text.textContent = `${task.name} (${subtasks.length})`;
-    
-    // Add the text to the group
-    annotationGroup.appendChild(text);
-    
-    // Create a list of subtask names with truncation
-    const maxSubtasks = subtasks.length; // Show all subtasks when hovering
-    const subtaskLines = subtasks.slice(0, maxSubtasks).map(subtask => {
-      const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      textElement.setAttribute('x', x + dotSize + 10); // Indent subtasks
-      textElement.setAttribute('y', 0); // Will be adjusted later
-      textElement.setAttribute('fill', '#555');
-      textElement.setAttribute('font-size', '14px');
-      
-      // Append status indicator
-      let statusText = subtask.done ? '✓ ' : '○ ';
-      textElement.textContent = statusText + subtask.name;
-      
-      return textElement;
-    });
-    
-    // Position the subtask lines
-    subtaskLines.forEach((line, index) => {
-      line.setAttribute('y', y + (index * 20) + 5);
-      annotationGroup.appendChild(line);
-    });
-    
-    // Calculate background rectangle dimensions
-    const padding = 5;
-    const width = 220; // Fixed width for annotations
-    const height = (subtaskLines.length * 20) + 25; // Height based on number of lines
-    
-    // Position and style background rectangle
-    bgRect.setAttribute('x', x + dotSize);
-    bgRect.setAttribute('y', y - dotSize - 10);
-    bgRect.setAttribute('width', width);
-    bgRect.setAttribute('height', height);
-    bgRect.setAttribute('fill', 'white');
-    bgRect.setAttribute('stroke', this.getQuadrantColorForTask(task));
-    bgRect.setAttribute('stroke-width', '1');
-    bgRect.setAttribute('opacity', '0.95');
-    
-    // Add the background to the group first so it appears behind the text
-    annotationGroup.insertBefore(bgRect, annotationGroup.firstChild);
-    
-    // Add the annotation group to the annotations group
-    this.annotationsGroup.appendChild(annotationGroup);
-    
-    // Store the annotation element reference with the task id for later access
-    if (!this.taskAnnotations) {
-      this.taskAnnotations = {};
-    }
-    this.taskAnnotations[task.id] = annotationGroup;
-  }
-
-  addDotInteractions(dot, task) {
-    // Get subtasks
-    const subtasks = this.tasks ? this.tasks.filter(t => t.parent_id === task.id) : [];
-    
-    // Create tooltip content
-    const tooltipContent = this.createTooltipContent(task, subtasks);
-    
-    // Mouse enter - show tooltip and enlarge dot
-    dot.addEventListener('mouseenter', () => {
-      // Enlarge the dot on hover
-      const originalRadius = parseFloat(dot.getAttribute('r'));
-      dot.setAttribute('r', originalRadius * 1.3);
-      dot.setAttribute('stroke-width', '2');
-      
-      // Show the annotation if this task has subtasks
-      if (subtasks.length > 0 && this.taskAnnotations && this.taskAnnotations[task.id]) {
-        const annotation = this.taskAnnotations[task.id];
-        annotation.style.opacity = '1';
-        annotation.style.visibility = 'visible';
-      }
-      
-      // Show tooltip
-      this.showTooltip(tooltipContent, dot);
-    });
-    
-    // Mouse leave - hide tooltip and restore dot size
-    dot.addEventListener('mouseleave', () => {
-      // Restore original size unless it's the selected dot
-      if (!dot.classList.contains('selected-dot')) {
-        dot.setAttribute('r', this.getTaskDotSize(task));
-        dot.setAttribute('stroke-width', '1.5');
-      }
-      
-      // Hide the annotation
-      if (this.taskAnnotations && this.taskAnnotations[task.id]) {
-        const annotation = this.taskAnnotations[task.id];
-        annotation.style.opacity = '0';
-        annotation.style.visibility = 'hidden';
-      }
-      
-      // Hide tooltip
-      this.hideTooltip();
-    });
-    
-    // Click - select the task
-    dot.addEventListener('click', (event) => {
-      event.stopPropagation();
-      
-      // Set this as the selected task
-      this.selectedTaskId = task.id;
-      
-      // Remove selected class from all dots
-      document.querySelectorAll('.selected-dot').forEach(el => {
-        el.classList.remove('selected-dot');
-        // Reset dot size
-        const taskId = el.getAttribute('data-task-id');
-        const relatedTask = this.tasks.find(t => t.id === parseInt(taskId));
-        if (relatedTask) {
-          el.setAttribute('r', this.getTaskDotSize(relatedTask));
-        }
-      });
-      
-      // Add selected class to this dot
-      dot.classList.add('selected-dot');
-      dot.setAttribute('r', parseFloat(this.getTaskDotSize(task)) * 1.3);
-      dot.setAttribute('stroke-width', '2');
-      
-      // Show task details
-      this.showTaskDetails(task);
-      
-      // Show a ripple effect
-      this.showRippleEffect(dot);
-    });
-  }
-  
-  createTooltipContent(task, subtasks) {
-    // Get subtasks if not provided
-    if (!subtasks && this.tasks) {
-      subtasks = this.tasks.filter(t => t.parent_id === task.id);
-    }
-    
-    const totalSubtasks = subtasks ? subtasks.length : 0;
-    const completedSubtasks = subtasks ? subtasks.filter(t => t.done).length : 0;
-    
-    let content = `
-      <div class="tooltip-header">
-        <div class="tooltip-title">
-          <span class="tooltip-importance-marker" 
-                style="background-color: ${this.getQuadrantColorForTask(task)}"></span>
-          <strong>${task.name || task.title}</strong>
-        </div>
-        <div class="tooltip-metrics">
-          <span class="tooltip-metric">Importance: ${task.importance}/10</span>
-          <span class="tooltip-metric">Urgency: ${task.urgency}/10</span>
-        </div>
-      </div>
-    `;
-    
-    // Add due date if exists
-    if (task.due_date) {
-      const dueDate = new Date(task.due_date);
-      const today = new Date();
-      const isOverdue = dueDate < today;
-      
-      content += `
-        <div class="tooltip-due-date ${isOverdue ? 'overdue' : ''}">
-          Due: ${dueDate.toLocaleDateString()}
-          ${isOverdue ? ' (Overdue)' : ''}
-      </div>
-    `;
-  }
-
-    // Add subtasks if available
-    if (totalSubtasks > 0) {
-      content += `
-        <div class="tooltip-subtasks">
-          <div class="tooltip-subtasks-header">
-            <strong>Subtasks (${completedSubtasks}/${totalSubtasks})</strong>
-          </div>
-      `;
-      
-      // Add up to 3 subtasks for preview
-      const previewSubtasks = subtasks.slice(0, 3);
-      previewSubtasks.forEach(subtask => {
-        content += `
-          <div class="tooltip-subtask ${subtask.done ? 'completed' : ''}">
-            <span class="subtask-status">${subtask.done ? '✓' : '○'}</span>
-            <span class="subtask-name">${subtask.name || subtask.title}</span>
-      </div>
-    `;
-      });
-      
-      // Add "more" indicator if there are additional subtasks
-      if (totalSubtasks > 3) {
-        content += `<div class="tooltip-more">+${totalSubtasks - 3} more</div>`;
-      }
-      
-      content += `</div>`;
-    }
-    
-    return content;
   }
   
   getTaskDotSize(task) {
@@ -1032,15 +737,26 @@ export class TaskManager {
     const rect = element.getBoundingClientRect();
     const chartRect = this.chartGroup.getBoundingClientRect();
     
-    // Position the tooltip above the dot
-    const tooltipX = rect.left + rect.width / 2;
-    const tooltipY = rect.top - 10;
+    // Position the tooltip
+    this.tooltipElement.style.left = `${rect.left + rect.width / 2}px`;
     
-    this.tooltipElement.style.left = `${tooltipX}px`;
-    this.tooltipElement.style.top = `${tooltipY}px`;
-    
-    // Make tooltip visible after positioning
+    // Check if tooltip would appear above the screen's top border
     setTimeout(() => {
+      const tooltipRect = this.tooltipElement.getBoundingClientRect();
+      const spaceAbove = rect.top;
+      const tooltipHeight = tooltipRect.height;
+      
+      // If tooltip would be cut off at the top of the viewport, position it below the element
+      if (spaceAbove < tooltipHeight + 20) {
+        this.tooltipElement.style.top = `${rect.bottom + 10}px`;
+        this.tooltipElement.style.transform = 'translate(-50%, 0)';
+      } else {
+        this.tooltipElement.style.top = `${rect.top - 10}px`;
+        this.tooltipElement.style.transform = 'translate(-50%, -100%)';
+      }
+      
+      // Make tooltip visible
+      this.tooltipElement.style.visibility = 'visible';
       this.tooltipElement.classList.add('visible');
     }, 10);
   }
@@ -1049,6 +765,38 @@ export class TaskManager {
     if (this.tooltipElement) {
       this.tooltipElement.classList.remove('visible');
     }
+  }
+  
+  calculateQuadrantStats(tasks) {
+    // Initialize quadrant stats if not already set
+    if (!this.quadrantStats) {
+      this.quadrantStats = { q1: 0, q2: 0, q3: 0, q4: 0 };
+    } else {
+      // Reset counters
+      this.quadrantStats = { q1: 0, q2: 0, q3: 0, q4: 0 };
+    }
+    
+    // Use provided tasks array or use active tasks from internal state
+    const tasksToAnalyze = tasks || this.tasks.filter(task => !task.done && !task.parent_id);
+    
+    // Count tasks per quadrant
+    tasksToAnalyze.forEach(task => {
+      const quadrant = this.getQuadrantForTask(task);
+      this.quadrantStats[quadrant]++;
+    });
+    
+    // Return the quadrant stats for potential use elsewhere
+    return this.quadrantStats;
+  }
+  
+  getQuadrantForTask(task) {
+    const highImportance = task.importance > 5;
+    const highUrgency = task.urgency > 5;
+    
+    if (highImportance && highUrgency) return 'q1';
+    if (highImportance && !highUrgency) return 'q2';
+    if (!highImportance && highUrgency) return 'q3';
+    return 'q4';
   }
   
   focusOnTask(taskId) {
@@ -1575,5 +1323,141 @@ export class TaskManager {
     dot.setAttribute("fill", this.getQuadrantColorForTask(task));
     dot.classList.add("task-dot");
     return dot;
+  }
+
+  addDotInteractions(dot, task) {
+    // Get subtasks
+    const subtasks = this.tasks ? this.tasks.filter(t => t.parent_id === task.id) : [];
+    
+    // Create tooltip content
+    const tooltipContent = this.createTooltipContent(task, subtasks);
+    
+    // Store the original radius as a data attribute
+    const originalRadius = this.getTaskDotSize(task);
+    dot.setAttribute('data-original-radius', originalRadius);
+    
+    // Mouse enter - show tooltip and enlarge dot
+    dot.addEventListener('mouseenter', () => {
+      // Enlarge the dot on hover using the stored original radius
+      const storedRadius = parseFloat(dot.getAttribute('data-original-radius'));
+      dot.setAttribute('r', storedRadius * 1.3);
+      dot.setAttribute('stroke-width', '2');
+      dot.setAttribute('stroke', this.isDarkTheme ? '#fff' : '#000');
+      
+      // Show tooltip
+      this.showTooltip(tooltipContent, dot);
+    });
+    
+    // Mouse leave - hide tooltip and restore dot size
+    dot.addEventListener('mouseleave', () => {
+      // Restore original size unless it's the selected dot
+      if (!dot.classList.contains('selected-dot')) {
+        const storedRadius = parseFloat(dot.getAttribute('data-original-radius'));
+        dot.setAttribute('r', storedRadius);
+        dot.setAttribute('stroke-width', '1.5');
+        dot.removeAttribute('stroke');
+      }
+      
+      // Hide tooltip
+      this.hideTooltip();
+    });
+    
+    // Click - select the task
+    dot.addEventListener('click', (event) => {
+      event.stopPropagation();
+      
+      // Set this as the selected task
+      this.selectedTaskId = task.id;
+      
+      // Remove selected class from all dots
+      document.querySelectorAll('.selected-dot').forEach(el => {
+        el.classList.remove('selected-dot');
+        // Reset dot size
+        const storedRadius = parseFloat(el.getAttribute('data-original-radius'));
+        el.setAttribute('r', storedRadius);
+        el.removeAttribute('stroke');
+      });
+      
+      // Add selected class to this dot
+      dot.classList.add('selected-dot');
+      const storedRadius = parseFloat(dot.getAttribute('data-original-radius'));
+      dot.setAttribute('r', storedRadius * 1.3);
+      dot.setAttribute('stroke-width', '2');
+      dot.setAttribute('stroke', this.isDarkTheme ? '#fff' : '#000');
+      
+      // Focus task in list view
+      this.focusOnTaskInList(task.id);
+      
+      // Show a ripple effect
+      this.showRippleEffect(dot);
+    });
+  }
+  
+  createTooltipContent(task, subtasks) {
+    // Get subtasks if not provided
+    if (!subtasks && this.tasks) {
+      subtasks = this.tasks.filter(t => t.parent_id === task.id);
+    }
+    
+    const totalSubtasks = subtasks ? subtasks.length : 0;
+    const completedSubtasks = subtasks ? subtasks.filter(t => t.done).length : 0;
+    
+    let content = `
+      <div class="tooltip-header">
+        <div class="tooltip-title">
+          <span class="tooltip-importance-marker" 
+                style="background-color: ${this.getQuadrantColorForTask(task)}"></span>
+          <strong>${task.name || task.title}</strong>
+        </div>
+        <div class="tooltip-metrics">
+          <span class="tooltip-metric">Importance: ${task.importance}/10</span>
+          <span class="tooltip-metric">Urgency: ${task.urgency}/10</span>
+        </div>
+      </div>
+    `;
+    
+    // Add due date if exists
+    if (task.due_date) {
+      const dueDate = new Date(task.due_date);
+      const today = new Date();
+      const isOverdue = dueDate < today;
+      
+      content += `
+        <div class="tooltip-due-date ${isOverdue ? 'overdue' : ''}">
+          Due: ${dueDate.toLocaleDateString()}
+          ${isOverdue ? ' (Overdue)' : ''}
+        </div>
+      `;
+    }
+
+    // Add subtasks if available
+    if (totalSubtasks > 0) {
+      content += `
+        <div class="tooltip-subtasks">
+          <div class="tooltip-subtasks-header">
+            <strong>Subtasks (${completedSubtasks}/${totalSubtasks})</strong>
+          </div>
+      `;
+      
+      // Add up to 3 subtasks for preview
+      const previewSubtasks = subtasks.slice(0, 3);
+      previewSubtasks.forEach(subtask => {
+        content += `
+          <div class="tooltip-subtask ${subtask.done ? 'completed' : ''}">
+            <span class="subtask-status">${subtask.done ? '✓' : '○'}</span>
+            <span class="subtask-name">${subtask.name || subtask.title}</span>
+          </div>
+        `;
+      });
+      
+      // Add "more" indicator if there are additional subtasks
+      if (totalSubtasks > 3) {
+        content += `<div class="tooltip-more">+${totalSubtasks - 3} more</div>`;
+      }
+      
+      content += `</div>`;
+    }
+    
+    return content;
   }
 }
