@@ -1,124 +1,181 @@
-// Initialize the task manager
-const taskManager = new TaskManager();
+import { TaskManager } from './taskManager.js';
 
-// Create Vue app
-const app = Vue.createApp({
-  data() {
-    return {
-      taskManager: taskManager,
-      tasks: [],
-      newTask: {
-        name: '',
-        importance: 5,
-        urgency: 5,
-        description: '',
-        done: false
-      },
-      theme: localStorage.getItem('theme') || 'light'
-    };
-  },
-  computed: {
-    activeTasks() {
-      return this.tasks.filter(task => !task.done && !task.parentId);
-    },
-    completedTasks() {
-      return this.tasks.filter(task => task.done && !task.parentId);
-    },
-    incompleteTasks() {
-      return this.tasks.filter(task => !task.done);
-    },
-    tasksByQuadrant() {
-      const quadrants = {
-        q1: [], // Important & Urgent (Do First)
-        q2: [], // Important & Not Urgent (Schedule)
-        q3: [], // Not Important & Urgent (Delegate)
-        q4: []  // Not Important & Not Urgent (Don't Do)
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize task manager
+  const taskManager = new TaskManager();
+  taskManager.init();
+
+  // Initialize Vue application
+  const app = Vue.createApp({
+    data() {
+      return {
+        // Task data
+        tasks: [],
+        activeTasks: [],
+        completedTasks: [],
+        selectedTaskId: null,
+        
+        // Form fields
+        taskName: '',
+        taskImportance: 5,
+        taskUrgency: 5,
+        
+        // UI states
+        isDarkTheme: localStorage.getItem('darkTheme') === 'true' || false,
+        showCompletedTasks: false,
+        showCompletedSubtasks: localStorage.getItem('showCompletedSubtasks') === 'true' || false,
+        
+        // Stats data
+        quadrantStats: { q1: 0, q2: 0, q3: 0, q4: 0 },
+        tasksByQuadrant: {},
+        quadrantLabels: {
+          q1: 'Do First',
+          q2: 'Schedule',
+          q3: 'Delegate',
+          q4: 'Don\'t Do'
+        },
+        
+        // Computed properties for templates
+        averageCompletionTime: '0 days',
+        mostProductiveDay: 'None',
       };
+    },
+    computed: {
+      currentTheme() {
+        return this.isDarkTheme ? 'dark' : 'light';
+      }
+    },
+    methods: {
+      // Theme handling
+      toggleTheme() {
+        this.isDarkTheme = !this.isDarkTheme;
+        localStorage.setItem('darkTheme', this.isDarkTheme);
+        document.querySelector('body').classList.toggle('dark-theme', this.isDarkTheme);
+        taskManager.updateChartColors();
+      },
       
-      this.incompleteTasks.forEach(task => {
-        if (task.importance > 5 && task.urgency > 5) quadrants.q1.push(task);
-        else if (task.importance > 5 && task.urgency <= 5) quadrants.q2.push(task);
-        else if (task.importance <= 5 && task.urgency > 5) quadrants.q3.push(task);
-        else quadrants.q4.push(task);
+      // Task submission
+      submitTask() {
+        if (!this.taskName.trim()) {
+          taskManager.showNotification('Please enter a task name', 'warning');
+          return;
+        }
+        
+        const taskData = {
+          name: this.taskName.trim(),
+          importance: parseInt(this.taskImportance),
+          urgency: parseInt(this.taskUrgency),
+          parent_id: null
+        };
+        
+        taskManager.addTask(taskData)
+          .then(response => {
+            if (response) {
+              taskManager.showNotification('Task added successfully', 'success');
+              this.taskName = '';
+              this.taskImportance = 5;
+              this.taskUrgency = 5;
+            }
+          })
+          .catch(error => {
+            taskManager.showNotification('Failed to add task', 'error');
+            console.error('Error adding task:', error);
+          });
+      },
+      
+      // Task actions
+      toggleTaskDone(task) {
+        taskManager.toggleDone(task.id);
+      },
+      
+      deleteTask(taskId) {
+        if (confirm('Are you sure you want to delete this task?')) {
+          taskManager.deleteTask(taskId);
+        }
+      },
+      
+      // Subtask management
+      getSubtasksForTask(taskId) {
+        return this.tasks.filter(task => task.parent_id === taskId);
+      },
+      
+      getCompletedSubtaskCount(taskId) {
+        return this.getSubtasksForTask(taskId).filter(task => task.done).length;
+      },
+      
+      // UI helpers
+      toggleShowCompletedSubtasks() {
+        this.showCompletedSubtasks = !this.showCompletedSubtasks;
+        localStorage.setItem('showCompletedSubtasks', this.showCompletedSubtasks);
+      },
+      
+      formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+      }
+    },
+    mounted() {
+      // Apply theme from localStorage
+      document.querySelector('body').classList.toggle('dark-theme', this.isDarkTheme);
+      
+      // Listen for task updates from TaskManager
+      window.addEventListener('tasksUpdated', (event) => {
+        const tasks = event.detail.tasks;
+        this.tasks = tasks || [];
+        
+        // Filter active and completed tasks
+        this.activeTasks = this.tasks.filter(task => !task.done && !task.parent_id);
+        this.completedTasks = this.tasks.filter(task => task.done && !task.parent_id);
+        
+        // Calculate quadrant statistics
+        this.calculateQuadrantStats();
       });
       
-      return quadrants;
+      // Listen for task selection events
+      window.addEventListener('taskSelected', (event) => {
+        this.selectedTaskId = event.detail.task.id;
+      });
+      
+      // Set Vue app reference in TaskManager
+      taskManager.setVueApp(this);
     },
-    quadrantStats() {
-      return {
-        q1: this.tasksByQuadrant.q1.length,
-        q2: this.tasksByQuadrant.q2.length,
-        q3: this.tasksByQuadrant.q3.length,
-        q4: this.tasksByQuadrant.q4.length
-      };
-    }
-  },
-  methods: {
-    submitTask() {
-      if (!this.newTask.name.trim()) {
-        taskManager.showNotification('Please enter a task name', 'warning');
-        return;
-      }
-      
-      const task = { ...this.newTask };
-      
-      taskManager.addTask(task)
-        .then(response => {
-          if (response.success) {
-            this.resetForm();
-            taskManager.showNotification('Task added successfully', 'success');
-          }
-        })
-        .catch(error => {
-          console.error('Error adding task:', error);
-          taskManager.showNotification('Failed to add task', 'error');
+    methods: {
+      calculateQuadrantStats() {
+        // Reset counters
+        this.quadrantStats = { q1: 0, q2: 0, q3: 0, q4: 0 };
+        
+        // Filter only parent tasks
+        const parentTasks = this.tasks.filter(task => !task.parent_id);
+        
+        // Count tasks per quadrant
+        parentTasks.forEach(task => {
+          const quadrant = this.getQuadrantForTask(task);
+          this.quadrantStats[quadrant]++;
         });
-    },
-    resetForm() {
-      this.newTask = {
-        name: '',
-        importance: 5,
-        urgency: 5,
-        description: '',
-        done: false
-      };
-    },
-    getQuadrantName(task) {
-      if (task.importance > 5 && task.urgency > 5) return "Q1: Do First";
-      if (task.importance > 5 && task.urgency <= 5) return "Q2: Schedule";
-      if (task.importance <= 5 && task.urgency > 5) return "Q3: Delegate";
-      return "Q4: Don't Do";
-    },
-    getQuadrantClass(task) {
-      if (task.importance > 5 && task.urgency > 5) return "quadrant-badge-q1";
-      if (task.importance > 5 && task.urgency <= 5) return "quadrant-badge-q2";
-      if (task.importance <= 5 && task.urgency > 5) return "quadrant-badge-q3";
-      return "quadrant-badge-q4";
-    },
-    toggleTheme() {
-      this.theme = this.theme === 'light' ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', this.theme);
-      localStorage.setItem('theme', this.theme);
-    },
-    deleteTask(taskId) {
-      if (confirm('Are you sure you want to delete this task? This will also delete all subtasks.')) {
-        this.taskManager.deleteTask(taskId);
+        
+        // Calculate additional statistics (not implemented fully)
+        this.calculateAdditionalStatistics();
+      },
+      
+      getQuadrantForTask(task) {
+        const highImportance = task.importance > 5;
+        const highUrgency = task.urgency > 5;
+        
+        if (highImportance && highUrgency) return 'q1';
+        if (highImportance && !highUrgency) return 'q2';
+        if (!highImportance && highUrgency) return 'q3';
+        return 'q4';
+      },
+      
+      calculateAdditionalStatistics() {
+        // These would be calculated from task data in a real implementation
+        this.averageCompletionTime = '2.5 days';
+        this.mostProductiveDay = 'Wednesday';
       }
     }
-  },
-  mounted() {
-    // Initialize with the saved theme
-    document.documentElement.setAttribute('data-theme', this.theme);
-    
-    // Listen for task updates from the task manager
-    window.addEventListener('tasksUpdated', (event) => {
-      this.tasks = event.detail.tasks;
-    });
-    
-    // Initialize task manager and load tasks
-    taskManager.init();
-  }
-});
-
-// Mount the Vue app
-app.mount('#app'); 
+  });
+  
+  // Mount Vue app
+  app.mount('#app');
+}); 

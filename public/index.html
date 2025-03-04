@@ -27,10 +27,10 @@
             --background-primary: #ffffff;
             --background-secondary: #f8f9fa;
             --surface-color: #ffffff;
-            --card-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
-            --hover-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-            --border-radius: 12px;
-            --transition-speed: 0.3s;
+            --card-shadow: none; /* Removed shadow */
+            --hover-shadow: none; /* Removed hover shadow */
+            --border-radius: 0px; /* Square corners */
+            --transition-speed: 0.2s;
             
             /* Quadrant colors */
             --q1-color: #f72585; /* Urgent & Important */
@@ -51,13 +51,13 @@
             --dark-background-primary: #121212;
             --dark-background-secondary: #1e1e1e;
             --dark-surface-color: #242424;
-            --dark-card-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            --dark-card-shadow: none; /* Removed shadow */
             
             /* Chart-specific styling variables */
             --chart-grid-color: rgba(200, 200, 200, 0.15);
             --chart-axis-color: rgba(120, 120, 120, 0.8);
             --chart-label-color: rgba(100, 100, 100, 0.9);
-            --chart-dot-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+            --chart-dot-shadow: none; /* Removed shadow */
             --chart-quadrant-border: rgba(80, 80, 80, 0.7);
             
             /* Improved Task-Subtask Connection Styles */
@@ -95,14 +95,12 @@
             margin: 1rem 0 2rem 0;
             background-color: var(--background-secondary);
             padding: 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
+            border: 1px solid #e0e0e0;
             min-height: 560px; /* Increased height */
             height: calc(100vh - 240px); /* More space from viewport */
             max-height: 800px; /* Increased max height */
             width: 100%;
             overflow: hidden; /* Changed from 'visible' to prevent overflow */
-            transition: all 0.3s ease;
             z-index: 1;
             display: flex;
             align-items: center;
@@ -111,22 +109,15 @@
         
         .dark-theme .chart-container {
             background-color: var(--dark-background-secondary);
+            border: 1px solid #333;
         }
         
         .chart-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: var(--border-radius);
-            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
-            pointer-events: none;
+            display: none; /* Remove the inner shadow effect */
         }
         
         .chart-container:hover {
-            box-shadow: var(--hover-shadow);
+            /* Removed hover shadow effect */
         }
         
         /* Chart title improvement */
@@ -182,19 +173,16 @@
         /* Task Dots Styling */
         .task-dot {
             cursor: pointer;
-            transition: r 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease;
             stroke: rgba(255, 255, 255, 0.8);
             stroke-width: 1.5;
         }
         
         .task-dot:hover {
-            stroke-width: 2.5;
-            filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
+            stroke-width: 2;
         }
         
         .task-dot.selected-dot {
-            stroke-width: 3;
-            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.4));
+            stroke-width: 2.5;
         }
         
         /* Quadrant Label Styling */
@@ -338,8 +326,8 @@
         /* Animations */
         @keyframes pulse {
             0% { r: attr(r px); opacity: 1; }
-            70% { r: calc(attr(r px) * 2.5); opacity: 0; }
-            100% { r: attr(r px); opacity: 0; }
+            70% { r: calc(attr(r px) * 1.1); opacity: 0.8; }
+            100% { r: attr(r px); opacity: 1; }
         }
         
         .pulse-animation {
@@ -840,39 +828,62 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             z-index: 1000;
         }
 
         .modal-content {
-            background-color: var(--background-primary);
-            border-radius: var(--border-radius);
-            padding: 25px;
+            background-color: var(--surface-color);
             width: 90%;
             max-width: 500px;
-            box-shadow: var(--card-shadow);
-            position: relative;
-            animation: modal-appear 0.3s ease;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
         }
 
         .dark-theme .modal-content {
             background-color: var(--dark-surface-color);
-            color: var(--dark-text-primary);
+            border: 1px solid #333;
         }
 
         .close-button {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 24px;
+            float: right;
+            font-size: 1.5rem;
+            line-height: 1;
             cursor: pointer;
             color: var(--text-secondary);
-            transition: color 0.2s ease;
         }
 
         .close-button:hover {
             color: var(--primary-color);
+        }
+
+        /* Edit modal */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .edit-modal-content {
+            background-color: var(--surface-color);
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            position: relative;
+            border: 1px solid #e0e0e0;
+        }
+
+        .dark-theme .edit-modal-content {
+            background-color: var(--dark-surface-color);
+            border: 1px solid #333;
         }
 
         .form-group {
@@ -1016,8 +1027,7 @@
         
         .theme-toggle, .stats-toggle {
             background: var(--surface-color);
-            border: none;
-            border-radius: 50px;
+            border: 1px solid #e0e0e0;
             padding: 8px 16px;
             cursor: pointer;
             display: flex;
@@ -1025,14 +1035,14 @@
             gap: 8px;
             font-weight: 500;
             color: var(--text-secondary);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s ease;
         }
         
         .theme-toggle:hover, .stats-toggle:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             color: var(--primary-color);
+        }
+        
+        .dark-theme .theme-toggle, .dark-theme .stats-toggle {
+            border: 1px solid #333;
         }
         
         .stats-toggle.active {
@@ -1056,15 +1066,18 @@
             background: var(--surface-color);
             border-left: 4px solid var(--primary-color);
             padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 10px;
-            transform: translateX(100%);
-            opacity: 0;
-            transition: transform 0.3s, opacity 0.3s;
+            opacity: 1; /* Always visible */
+            border: 1px solid #e0e0e0;
+            border-left-width: 4px;
+        }
+        
+        .dark-theme .notification {
+            border-color: #333;
+            border-left-width: 4px;
         }
         
         .notification.notification-visible {
@@ -1124,32 +1137,17 @@
         
         .stat-card {
             background: var(--surface-color);
-            border-radius: var(--border-radius);
             padding: 1.5rem;
             text-align: center;
-            box-shadow: var(--card-shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #e0e0e0;
         }
         
-        .stat-card:nth-child(1) {
-            border-top: 3px solid var(--q1-color);
-        }
-        
-        .stat-card:nth-child(2) {
-            border-top: 3px solid var(--q2-color);
-        }
-        
-        .stat-card:nth-child(3) {
-            border-top: 3px solid var(--q3-color);
-        }
-        
-        .stat-card:nth-child(4) {
-            border-top: 3px solid var(--q4-color);
+        .dark-theme .stat-card {
+            border: 1px solid #333;
         }
         
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--hover-shadow);
+            border-color: var(--primary-color);
         }
         
         .stat-value {
@@ -1167,10 +1165,46 @@
         /* Statistics view styling */
         .stats-view {
             background: var(--surface-color);
-            border-radius: var(--border-radius);
             padding: 1.8rem;
-            box-shadow: var(--card-shadow);
+            border: 1px solid #e0e0e0;
             margin-bottom: 2.5rem;
+        }
+        
+        .dark-theme .stats-view {
+            border: 1px solid #333;
+        }
+        
+        /* Header controls styling */
+        .header-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        
+        .theme-toggle, .stats-toggle {
+            background: var(--surface-color);
+            border: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .theme-toggle:hover, .stats-toggle:hover {
+            color: var(--primary-color);
+        }
+        
+        .dark-theme .theme-toggle, .dark-theme .stats-toggle {
+            border: 1px solid #333;
+        }
+        
+        .stats-toggle.active {
+            background: var(--primary-color);
+            color: white;
         }
         
         .stats-container {
@@ -1236,26 +1270,23 @@
         /* Task Dots Styling */
         .task-dot {
             cursor: pointer;
-            transition: r 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease;
             stroke: rgba(255, 255, 255, 0.8);
             stroke-width: 1.5;
         }
         
         .task-dot:hover {
-            stroke-width: 2.5;
-            filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
+            stroke-width: 2;
         }
         
         .task-dot.selected-dot {
-            stroke-width: 3;
-            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.4));
+            stroke-width: 2.5;
         }
         
-        /* Pulse animation for selected dots */
+        /* Remove pulse animation for selected dots */
         @keyframes pulse {
             0% { r: attr(r px); opacity: 1; }
-            70% { r: calc(attr(r px) * 2.5); opacity: 0; }
-            100% { r: attr(r px); opacity: 0; }
+            70% { r: calc(attr(r px) * 1.1); opacity: 0.8; }
+            100% { r: attr(r px); opacity: 1; }
         }
         
         .pulse-animation {
@@ -1445,7 +1476,7 @@
         .task-table, .subtask-table {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 0 8px;
+            border-spacing: 0 6px; /* Reduced from 8px for more compact view */
         }
         
         .task-table tr {
@@ -1462,7 +1493,7 @@
         }
         
         .task-table td {
-            padding: 15px;
+            padding: 10px 15px; /* Reduced from 15px for more compact height */
         }
         
         .task-info-content {
@@ -1470,306 +1501,296 @@
             align-items: center;
         }
         
-        .task-info {
-            border-radius: var(--border-radius) 0 0 var(--border-radius);
+        .task-name-container {
+            display: flex;
+            flex-direction: column;
+            margin-left: 10px;
+            width: 100%; /* Make it fill the available space */
         }
         
-        .task-metrics {
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
-            text-align: right;
-            width: 140px;
-            white-space: nowrap;
+        .task-checkbox {
+            margin-right: 8px;
+            flex-shrink: 0;
+            vertical-align: middle;
         }
         
-        .subtasks-wrapper {
-            margin-left: 40px;
-            margin-bottom: 15px;
+        .task-name {
+            font-weight: 600;
+            margin-bottom: 2px; /* Reduced from 4px */
+            display: block; /* Make it a block to fill the width */
+            text-align: left;
         }
         
+        .task-date {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .task-metric {
+            display: inline-block;
+            background: rgba(var(--primary-color-rgb), 0.1);
+            color: var(--primary-color);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+        
+        /* Make the subtasks also follow the table-like layout */
         .subtasks-container {
-            background-color: rgba(var(--primary-color-rgb), 0.03);
-            border-left: 2px dashed var(--primary-color-light);
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
-            padding: 10px;
+            display: table;
+            width: calc(100% - 30px);
+            margin-left: 30px;
+            border-spacing: 0 6px;
+            margin-top: 4px;
             margin-bottom: 8px;
         }
         
-        .subtask-table {
-            margin-top: 8px;
-        }
-        
-        .subtask-table tr {
-            background-color: rgba(var(--primary-color-rgb), 0.06);
-            border-radius: 4px;
+        .subtask {
+            display: table-row;
+            background-color: rgba(var(--primary-color-rgb), 0.05);
             transition: all 0.2s ease;
         }
         
-        .subtask-table tr:hover {
-            background-color: rgba(var(--primary-color-rgb), 0.1);
-            transform: translateY(-2px);
-        }
-        
-        .subtask-table td {
-            padding: 8px 12px;
-        }
-        
         .subtask-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: table-cell;
+            vertical-align: middle;
+            padding: 8px 12px;
             border-radius: 4px 0 0 4px;
         }
         
         .subtask-metrics {
+            display: table-cell;
+            vertical-align: middle;
             text-align: right;
-            width: 120px;
-            white-space: nowrap;
+            padding: 8px 12px;
             border-radius: 0 4px 4px 0;
+            width: 100px;
+            white-space: nowrap;
         }
         
-        .subtask-metric {
-            display: inline-block;
-            background: rgba(var(--primary-color-rgb), 0.15);
-            color: var(--primary-color);
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            margin-left: 4px;
+        .add-subtask-btn {
+            margin-left: 30px;
+            margin-bottom: 10px;
         }
         
-        .dark-theme .task-table tr {
-            background-color: var(--dark-surface-color);
+        /* Selected task highlighting */
+        .task.selected {
+            background-color: rgba(var(--primary-color-rgb), 0.08);
+            box-shadow: 0 3px 10px rgba(var(--primary-color-rgb), 0.15);
+            transform: translateY(-2px);
         }
         
-        .dark-theme .subtasks-container {
-            background-color: rgba(var(--dark-primary-color-rgb), 0.07);
-        }
-        
-        .dark-theme .subtask-table tr {
-            background-color: rgba(var(--dark-primary-color-rgb), 0.1);
-        }
-        
-        .dark-theme .subtask-table tr:hover {
-            background-color: rgba(var(--dark-primary-color-rgb), 0.15);
-        }
-        
-        .dark-theme .subtask-metric {
+        /* Dark theme adjustments */
+        .dark-theme .task-metric {
             background: rgba(var(--dark-primary-color-rgb), 0.2);
             color: var(--dark-primary-color-light);
         }
         
-        /* Selected Item Styling */
-        .task-table tr.selected {
-            background-color: rgba(var(--primary-color-rgb), 0.08);
-            box-shadow: 0 3px 10px rgba(var(--primary-color-rgb), 0.2);
-            transform: translateY(-3px);
+        .dark-theme .subtask {
+            background-color: rgba(var(--dark-primary-color-rgb), 0.1);
         }
         
-        .dark-theme .task-table tr.selected {
+        .dark-theme .task.selected {
             background-color: rgba(var(--dark-primary-color-rgb), 0.15);
         }
 
-        .task-actions {
+        /* Edit button and modal styling */
+        .subtask-actions {
             display: flex;
-            gap: 10px;
+            gap: 5px;
         }
-        
-        .delete-task {
-            border: none;
-            background-color: transparent;
-            color: var(--error-color);
-            opacity: 0.7;
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
+
+        .edit-subtask-btn {
+            padding: 3px 8px;
+            font-size: 12px;
             border-radius: 4px;
-            transition: all 0.2s ease;
-            margin-left: 0.5rem;
-        }
-        
-        .delete-task:hover {
-            background-color: rgba(229, 56, 59, 0.1);
-            opacity: 1;
-        }
-        
-        /* Style for completed tasks */
-        .completed-task {
-            opacity: 0.8;
-            background-color: var(--background-secondary);
-        }
-        
-        .completed-task .task-name {
-            text-decoration: line-through;
-            color: var(--text-secondary);
-        }
-        
-        /* Task item styling */
-        .task-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            background: var(--surface-color);
-            border-radius: var(--border-radius);
-            margin-bottom: 8px;
-            box-shadow: var(--card-shadow);
-            transition: all 0.2s ease;
-        }
-
-        .task-item:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--hover-shadow);
-        }
-
-        .task-item .task-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-        }
-
-        .task-item .delete-btn {
+            border: 1px solid var(--text-secondary);
             background: transparent;
-            border: none;
-            color: var(--error-color);
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            opacity: 0;
-            transition: all 0.2s ease;
-        }
-
-        .task-item:hover .delete-btn {
-            opacity: 1;
-        }
-
-        .task-item .delete-btn:hover {
-            background: rgba(var(--error-color-rgb), 0.1);
-            transform: scale(1.1);
-        }
-
-        /* Additional Task-Subtask Styling */
-        .task-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-bottom: 1rem;
-        }
-        
-        .vue-task-item {
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            position: relative;
-        }
-        
-        .vue-task-item:hover {
-            background-color: var(--task-hover-bg);
-        }
-        
-        .subtasks-row {
-            background-color: var(--background-secondary);
-            border-left: 3px solid var(--subtask-connector-color);
-        }
-        
-        .subtasks-cell {
-            padding: 0;
-        }
-        
-        .subtasks-container {
-            margin: 0;
-            padding: 0.5rem 0 0.5rem var(--subtask-indent);
-            position: relative;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .subtasks-header {
-            margin-bottom: 0.5rem;
             color: var(--text-secondary);
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        
-        .subtask-table {
-            width: 100%;
-        }
-        
-        .subtask {
-            padding: 0.4rem 0.5rem;
-            transition: background-color 0.2s ease;
-            border-radius: 4px;
-        }
-        
-        .subtask:hover {
-            background-color: rgba(0, 0, 0, 0.03);
-        }
-        
-        .subtask-info {
-            display: flex;
-            align-items: center;
-        }
-        
-        .subtask-status {
-            width: 1.2rem;
-            height: 1.2rem;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid var(--primary-color);
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            cursor: pointer;
         }
-        
-        .subtask-status.completed {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .subtask-name.completed {
-            text-decoration: line-through;
-            color: var(--text-secondary);
-        }
-        
-        .add-subtask-btn {
-            border: none;
-            background-color: transparent;
+
+        .edit-subtask-btn:hover {
+            background: var(--background-secondary);
             color: var(--primary-color);
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
+            border-color: var(--primary-color);
+        }
+
+        .edit-icon {
+            font-size: 14px;
+        }
+
+        /* Filter button for completed subtasks */
+        .subtasks-filter-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 5px;
+        }
+
+        .subtasks-filter-toggle {
+            background: none;
+            border: 1px solid var(--primary-color-light);
+            color: var(--primary-color);
             font-size: 0.8rem;
-            border-radius: 4px;
-            transition: background-color 0.2s ease;
-        }
-        
-        .add-subtask-btn:hover {
-            background-color: rgba(67, 97, 238, 0.1);
-        }
-
-        /* Highlight pulse animation for selected tasks */
-        @keyframes highlight-pulse {
-          0% { background-color: rgba(var(--primary-color-rgb), 0.1); }
-          50% { background-color: rgba(var(--primary-color-rgb), 0.3); }
-          100% { background-color: rgba(var(--primary-color-rgb), 0.1); }
+            padding: 3px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        .highlight-pulse {
-          animation: highlight-pulse 1.5s ease;
+        .subtasks-filter-toggle:hover {
+            background-color: rgba(var(--primary-color-rgb), 0.1);
         }
 
-        .task.selected, .vue-task-item.selected {
-          background-color: rgba(var(--primary-color-rgb), 0.1);
-          box-shadow: inset 0 0 0 2px var(--primary-color);
-          position: relative;
+        .subtasks-filter-toggle i {
+            font-size: 0.7rem;
         }
 
-        .task.selected::before, .vue-task-item.selected::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 0;
-          height: 100%;
-          width: 4px;
-          background-color: var(--primary-color);
+        /* For completed subtasks that are hidden */
+        .subtask.completed.hidden {
+            display: none;
+        }
+
+        /* Task Annotation Styling */
+        .task-annotation {
+            pointer-events: none;
+            opacity: 0.95;
+        }
+
+        .task-annotation rect {
+            fill: var(--surface-color);
+            stroke-width: 1;
+        }
+
+        .dark-theme .task-annotation rect {
+            fill: var(--dark-surface-color);
+        }
+
+        .task-annotation text {
+            font-family: 'Inter', sans-serif;
+            fill: var(--text-primary);
+        }
+
+        .dark-theme .task-annotation text {
+            fill: var(--dark-text-primary);
+        }
+
+        /* Task cards */
+        .task-card {
+            background: var(--surface-color);
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .dark-theme .task-card {
+            border: 1px solid #333;
+        }
+
+        /* Buttons */
+        .btn, 
+        .btn-primary,
+        .btn-secondary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.9rem 1.8rem;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .btn:hover,
+        .btn-primary:hover,
+        .btn-secondary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--background-secondary);
+            color: var(--text-primary);
+            border: 1px solid #e0e0e0;
+        }
+
+        .dark-theme .btn-secondary {
+            border: 1px solid #333;
+        }
+
+        /* Form elements */
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+        }
+
+        .dark-theme input[type="text"],
+        .dark-theme input[type="number"],
+        .dark-theme input[type="date"],
+        .dark-theme select,
+        .dark-theme textarea {
+            border: 1px solid #333;
+            background: var(--dark-surface-color);
+            color: var(--dark-text-primary);
+        }
+
+        /* Task table */
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .task-table th,
+        .task-table td {
+            padding: 10px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .dark-theme .task-table th,
+        .dark-theme .task-table td {
+            border-bottom: 1px solid #333;
+        }
+
+        /* Subtitle filter controls */
+        .subtasks-filter-toggle {
+            background: var(--surface-color);
+            border: 1px solid #e0e0e0;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            cursor: pointer;
+        }
+
+        .dark-theme .subtasks-filter-toggle {
+            border: 1px solid #333;
+        }
+
+        .subtasks-filter-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        /* Task checkbox */
+        .task-checkbox,
+        .subtask-checkbox {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--text-secondary);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -1908,11 +1929,16 @@
 
         <!-- Task list -->
         <div class="task-container">
-            <!-- Active Tasks Section with Toggle -->
-            <div class="task-section" id="active-tasks" v-if="hasActiveTasks">
-                <div class="section-header" @click="toggleTaskSection('active')">
-                    <h2><i class="fas fa-tasks"></i> Active Tasks ({{ activeTasks.length }})</h2>
-                    <span class="toggle-icon"><i :class="taskSectionOpen.active ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i></span>
+            <!-- Active Tasks Section -->
+            <section class="task-section" id="active-tasks">
+                <div class="section-header">
+                    <h2>Active Tasks ({{ activeTasks.length }})</h2>
+                    <div class="subtasks-filter-controls">
+                        <button class="subtasks-filter-toggle" @click="toggleCompletedSubtasks">
+                            <i class="fas" :class="showCompletedSubtasks ? 'fa-eye' : 'fa-eye-slash'"></i>
+                            {{ showCompletedSubtasks ? 'Hide' : 'Show' }} Completed Subtasks
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="task-table-container" v-if="taskSectionOpen.active">
@@ -1946,14 +1972,12 @@
                                 <tr v-if="getSubtasksForTask(task.id).length > 0" class="subtasks-row">
                                     <td colspan="2" class="subtasks-cell">
                                         <div class="subtasks-container">
-                                            <div class="subtasks-header">
-                                                <span>Subtasks ({{ getCompletedSubtaskCount(task.id) }}/{{ getSubtasksForTask(task.id).length }})</span>
-                                            </div>
                                             <table class="subtask-table">
                                                 <tbody>
                                                     <tr v-for="subtask in getSubtasksForTask(task.id)" 
                                                         :key="subtask.id" 
                                                         class="subtask" 
+                                                        :class="{'completed': subtask.done, 'hidden': subtask.done && !showCompletedSubtasks}"
                                                         :data-subtask-id="subtask.id">
                                                         <td class="subtask-info">
                                                             <div class="subtask-status" 
@@ -1979,7 +2003,7 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
             
             <!-- Completed Tasks Section with Toggle -->
             <div class="task-section" id="completed-tasks" v-if="hasCompletedTasks">
@@ -2018,14 +2042,12 @@
                                 <tr v-if="getSubtasksForTask(task.id).length > 0" class="subtasks-row">
                                     <td colspan="2" class="subtasks-cell">
                                         <div class="subtasks-container">
-                                            <div class="subtasks-header">
-                                                <span>Subtasks ({{ getCompletedSubtaskCount(task.id) }}/{{ getSubtasksForTask(task.id).length }})</span>
-                                            </div>
                                             <table class="subtask-table">
                                                 <tbody>
                                                     <tr v-for="subtask in getSubtasksForTask(task.id)" 
                                                         :key="subtask.id" 
                                                         class="subtask" 
+                                                        :class="{'completed': subtask.done, 'hidden': subtask.done && !showCompletedSubtasks}"
                                                         :data-subtask-id="subtask.id">
                                                         <td class="subtask-info">
                                                             <div class="subtask-status" 
@@ -2214,7 +2236,8 @@
                         completed: false
                     },
                     theme: localStorage.getItem('priority-task-theme') || 'light',
-                    currentTheme: localStorage.getItem('priority-task-theme') || 'light'
+                    currentTheme: localStorage.getItem('priority-task-theme') || 'light',
+                    showCompletedSubtasks: true, // Add this property to control visibility
                 }
             },
             computed: {
@@ -2595,7 +2618,19 @@
                 },
                 deleteTask(taskId) {
                     this.taskManager.deleteTask(taskId);
-                }
+                },
+                toggleCompletedSubtasks() {
+                    this.showCompletedSubtasks = !this.showCompletedSubtasks;
+                    
+                    // Toggle the 'hidden' class on completed subtasks
+                    document.querySelectorAll('.subtask.completed').forEach(el => {
+                        if (this.showCompletedSubtasks) {
+                            el.classList.remove('hidden');
+                        } else {
+                            el.classList.add('hidden');
+                        }
+                    });
+                },
             }
         }).mount('#app')
     </script>

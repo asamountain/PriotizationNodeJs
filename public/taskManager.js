@@ -690,7 +690,7 @@ export class TaskManager {
     const mainTasks = tasksToRender.filter(task => !task.done && !task.parent_id);
     console.log(`Rendering ${mainTasks.length} tasks on chart`);
     
-    // Clear existing dots
+    // Clear existing dots and annotations
     if (this.dotsGroup) {
       this.dotsGroup.innerHTML = '';
     } else {
@@ -698,6 +698,15 @@ export class TaskManager {
       this.dotsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       this.dotsGroup.classList.add('task-dots');
       this.chartGroup.appendChild(this.dotsGroup);
+    }
+    
+    // Clear and recreate annotations group
+    if (this.annotationsGroup) {
+      this.annotationsGroup.innerHTML = '';
+    } else {
+      this.annotationsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      this.annotationsGroup.classList.add('task-annotations');
+      this.chartGroup.appendChild(this.annotationsGroup);
     }
     
     // Track positions of each task dot for overlap detection
@@ -732,9 +741,95 @@ export class TaskManager {
         
         // Add to the dots group
         this.dotsGroup.appendChild(dot);
+        
+        // Create annotation for subtasks
+        this.createTaskAnnotation(task, adjustedX, adjustedY, dotSize);
     });
   }
   
+  // New function to create annotations for subtasks
+  createTaskAnnotation(task, x, y, dotSize) {
+    // Get the subtasks for this task
+    const subtasks = this.tasks ? this.tasks.filter(t => t.parent_id === task.id) : [];
+    
+    // If there are no subtasks, don't create an annotation
+    if (!subtasks || subtasks.length === 0) {
+      return;
+    }
+    
+    // Create a group for the annotation
+    const annotationGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    annotationGroup.classList.add('task-annotation');
+    annotationGroup.setAttribute('data-parent-id', task.id);
+    // Hide annotation by default
+    annotationGroup.style.opacity = '0';
+    annotationGroup.style.visibility = 'hidden';
+    
+    // Create background rectangle for the annotation
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    
+    // Create text element for the annotation
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x + dotSize + 5);
+    text.setAttribute('y', y - dotSize);
+    text.setAttribute('fill', '#333');
+    text.setAttribute('font-size', '12px');
+    text.setAttribute('font-weight', 'bold');
+    text.textContent = `${task.name} (${subtasks.length})`;
+    
+    // Add the text to the group
+    annotationGroup.appendChild(text);
+    
+    // Create a list of subtask names with truncation
+    const maxSubtasks = subtasks.length; // Show all subtasks when hovering
+    const subtaskLines = subtasks.slice(0, maxSubtasks).map(subtask => {
+      const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textElement.setAttribute('x', x + dotSize + 10); // Indent subtasks
+      textElement.setAttribute('y', 0); // Will be adjusted later
+      textElement.setAttribute('fill', '#555');
+      textElement.setAttribute('font-size', '14px');
+      
+      // Append status indicator
+      let statusText = subtask.done ? '✓ ' : '○ ';
+      textElement.textContent = statusText + subtask.name;
+      
+      return textElement;
+    });
+    
+    // Position the subtask lines
+    subtaskLines.forEach((line, index) => {
+      line.setAttribute('y', y + (index * 20) + 5);
+      annotationGroup.appendChild(line);
+    });
+    
+    // Calculate background rectangle dimensions
+    const padding = 5;
+    const width = 220; // Fixed width for annotations
+    const height = (subtaskLines.length * 20) + 25; // Height based on number of lines
+    
+    // Position and style background rectangle
+    bgRect.setAttribute('x', x + dotSize);
+    bgRect.setAttribute('y', y - dotSize - 10);
+    bgRect.setAttribute('width', width);
+    bgRect.setAttribute('height', height);
+    bgRect.setAttribute('fill', 'white');
+    bgRect.setAttribute('stroke', this.getQuadrantColorForTask(task));
+    bgRect.setAttribute('stroke-width', '1');
+    bgRect.setAttribute('opacity', '0.95');
+    
+    // Add the background to the group first so it appears behind the text
+    annotationGroup.insertBefore(bgRect, annotationGroup.firstChild);
+    
+    // Add the annotation group to the annotations group
+    this.annotationsGroup.appendChild(annotationGroup);
+    
+    // Store the annotation element reference with the task id for later access
+    if (!this.taskAnnotations) {
+      this.taskAnnotations = {};
+    }
+    this.taskAnnotations[task.id] = annotationGroup;
+  }
+
   addDotInteractions(dot, task) {
     // Get subtasks
     const subtasks = this.tasks ? this.tasks.filter(t => t.parent_id === task.id) : [];
@@ -749,6 +844,13 @@ export class TaskManager {
       dot.setAttribute('r', originalRadius * 1.3);
       dot.setAttribute('stroke-width', '2');
       
+      // Show the annotation if this task has subtasks
+      if (subtasks.length > 0 && this.taskAnnotations && this.taskAnnotations[task.id]) {
+        const annotation = this.taskAnnotations[task.id];
+        annotation.style.opacity = '1';
+        annotation.style.visibility = 'visible';
+      }
+      
       // Show tooltip
       this.showTooltip(tooltipContent, dot);
     });
@@ -759,6 +861,13 @@ export class TaskManager {
       if (!dot.classList.contains('selected-dot')) {
         dot.setAttribute('r', this.getTaskDotSize(task));
         dot.setAttribute('stroke-width', '1.5');
+      }
+      
+      // Hide the annotation
+      if (this.taskAnnotations && this.taskAnnotations[task.id]) {
+        const annotation = this.taskAnnotations[task.id];
+        annotation.style.opacity = '0';
+        annotation.style.visibility = 'hidden';
       }
       
       // Hide tooltip
@@ -793,9 +902,6 @@ export class TaskManager {
       
       // Show a ripple effect
       this.showRippleEffect(dot);
-      
-      // Show notification
-      this.showNotification('Selected task', `Focused on "${task.name || task.title}"`, 'info');
     });
   }
   
