@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   taskManager.init();
 
   // Initialize Vue application
-  const app = Vue.createApp({
+  const app = window.Vue.createApp({
     data() {
       return {
         // Task data
@@ -20,10 +20,44 @@ document.addEventListener('DOMContentLoaded', () => {
         taskImportance: 5,
         taskUrgency: 5,
         
+        // New properties to fix errors
+        showStatsView: false,
+        newTask: {
+          name: '',
+          importance: 5,
+          urgency: 5,
+          due_date: null
+        },
+        
         // UI states
         isDarkTheme: localStorage.getItem('darkTheme') === 'true' || false,
         showCompletedTasks: false,
         showCompletedSubtasks: localStorage.getItem('showCompletedSubtasks') === 'true' || false,
+        taskSectionOpen: {
+          active: true,
+          completed: false
+        },
+        
+        // Subtask modal
+        showSubtaskModal: false,
+        newSubtask: {
+          name: '',
+          importance: 5,
+          urgency: 5,
+          due_date: null,
+          parent_id: null
+        },
+        
+        // Edit task/subtask
+        showEditForm: false,
+        editingSubtask: {
+          id: null,
+          name: '',
+          importance: 5,
+          urgency: 5,
+          parent_id: null,
+          originalParentId: null
+        },
         
         // Stats data
         quadrantStats: { q1: 0, q2: 0, q3: 0, q4: 0 },
@@ -94,6 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       },
       
+      handleTaskClick(taskId) {
+        console.log('Handling task click:', taskId);
+        taskManager.highlightTask(taskId);
+      },
+      
       // Subtask management
       getSubtasksForTask(taskId) {
         return this.tasks.filter(task => task.parent_id === taskId);
@@ -103,44 +142,126 @@ document.addEventListener('DOMContentLoaded', () => {
         return this.getSubtasksForTask(taskId).filter(task => task.done).length;
       },
       
+      showAddSubtaskForm(taskId) {
+        this.selectedTaskId = taskId;
+        this.showSubtaskModal = true;
+        this.newSubtask = {
+          name: '',
+          importance: 5,
+          urgency: 5,
+          due_date: null,
+          parent_id: taskId
+        };
+      },
+      
+      closeSubtaskModal() {
+        this.showSubtaskModal = false;
+        this.selectedTaskId = null;
+      },
+      
+      addSubtask() {
+        if (!this.newSubtask.name || !this.selectedTaskId) {
+          console.error('Invalid subtask data or missing parent ID');
+          return;
+        }
+        
+        if (taskManager) {
+          const subtaskData = {
+            name: this.newSubtask.name,
+            importance: this.newSubtask.importance,
+            urgency: this.newSubtask.urgency,
+            due_date: this.newSubtask.due_date
+          };
+          
+          taskManager.addSubtask(subtaskData, this.selectedTaskId);
+          this.closeSubtaskModal();
+        }
+      },
+      
+      selectTask(task) {
+        this.selectedTaskId = task.id;
+        if (taskManager) {
+          // Focus on this task in the chart
+          taskManager.focusOnTask(task.id);
+          
+          // Also call handleTaskClick to focus the dot in the chart
+          const event = { currentTarget: { dataset: { taskId: task.id } } };
+          taskManager.handleTaskClick(event);
+        }
+      },
+      
+      // Edit task/subtask management
+      editSubtask(subtask) {
+        this.editingSubtask = {
+          id: subtask.id,
+          name: subtask.name,
+          importance: subtask.importance,
+          urgency: subtask.urgency,
+          parent_id: subtask.parent_id,
+          originalParentId: subtask.parent_id
+        };
+        this.showEditForm = true;
+      },
+      
+      saveSubtaskEdit() {
+        const updatedSubtask = {
+          id: this.editingSubtask.id,
+          name: this.editingSubtask.name,
+          importance: this.editingSubtask.importance,
+          urgency: this.editingSubtask.urgency,
+          parent_id: this.editingSubtask.parent_id
+        };
+        
+        taskManager.updateSubtask(updatedSubtask);
+        this.showEditForm = false;
+      },
+      
+      cancelEdit() {
+        this.showEditForm = false;
+        this.editingSubtask = {
+          id: null,
+          name: '',
+          importance: 5,
+          urgency: 5,
+          parent_id: null,
+          originalParentId: null
+        };
+      },
+      
       // UI helpers
       toggleShowCompletedSubtasks() {
         this.showCompletedSubtasks = !this.showCompletedSubtasks;
         localStorage.setItem('showCompletedSubtasks', this.showCompletedSubtasks);
       },
       
+      toggleTaskSection(section) {
+        this.taskSectionOpen[section] = !this.taskSectionOpen[section];
+      },
+      
+      toggleCompletedSubtasks() {
+        this.showCompletedSubtasks = !this.showCompletedSubtasks;
+        
+        // Toggle the 'hidden' class on completed subtasks
+        document.querySelectorAll('.subtask.completed').forEach(el => {
+          if (this.showCompletedSubtasks) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        });
+      },
+      
+      updateTasks(tasks) {
+        console.log('Vue app received tasks update:', tasks.length, 'tasks');
+        this.tasks = tasks;
+      },
+      
       formatDate(dateString) {
         if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleDateString();
-      }
-    },
-    mounted() {
-      // Apply theme from localStorage
-      document.querySelector('body').classList.toggle('dark-theme', this.isDarkTheme);
+      },
       
-      // Listen for task updates from TaskManager
-      window.addEventListener('tasksUpdated', (event) => {
-        const tasks = event.detail.tasks;
-        this.tasks = tasks || [];
-        
-        // Filter active and completed tasks
-        this.activeTasks = this.tasks.filter(task => !task.done && !task.parent_id);
-        this.completedTasks = this.tasks.filter(task => task.done && !task.parent_id);
-        
-        // Calculate quadrant statistics
-        this.calculateQuadrantStats();
-      });
-      
-      // Listen for task selection events
-      window.addEventListener('taskSelected', (event) => {
-        this.selectedTaskId = event.detail.task.id;
-      });
-      
-      // Set Vue app reference in TaskManager
-      taskManager.setVueApp(this);
-    },
-    methods: {
       calculateQuadrantStats() {
         // Reset counters
         this.quadrantStats = { q1: 0, q2: 0, q3: 0, q4: 0 };
@@ -173,6 +294,31 @@ document.addEventListener('DOMContentLoaded', () => {
         this.averageCompletionTime = '2.5 days';
         this.mostProductiveDay = 'Wednesday';
       }
+    },
+    mounted() {
+      // Apply theme from localStorage
+      document.querySelector('body').classList.toggle('dark-theme', this.isDarkTheme);
+      
+      // Listen for task updates from TaskManager
+      window.addEventListener('tasksUpdated', (event) => {
+        const tasks = event.detail.tasks;
+        this.tasks = tasks || [];
+        
+        // Filter active and completed tasks
+        this.activeTasks = this.tasks.filter(task => !task.done && !task.parent_id);
+        this.completedTasks = this.tasks.filter(task => task.done && !task.parent_id);
+        
+        // Calculate quadrant statistics
+        this.calculateQuadrantStats();
+      });
+      
+      // Listen for task selection events
+      window.addEventListener('taskSelected', (event) => {
+        this.selectedTaskId = event.detail.task.id;
+      });
+      
+      // Set Vue app reference in TaskManager
+      taskManager.setVueApp(this);
     }
   });
   
