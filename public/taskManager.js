@@ -299,21 +299,10 @@ export class TaskManager {
     this.chartWidth = chartWidth;
     this.chartHeight = chartHeight;
     
-    // Add quadrant labels
-    const quarterWidth = chartWidth / 4;
-    const quarterHeight = chartHeight / 4;
-    
-    // Q1: Important & Urgent (top right)
-    this.addQuadrantLabel('Q1', midX + quarterWidth, midY - quarterHeight, 'Important & Urgent');
-    
-    // Q2: Important & Not Urgent (top left)
-    this.addQuadrantLabel('Q2', midX - quarterWidth, midY - quarterHeight, 'Important & Not Urgent');
-    
-    // Q3: Not Important & Urgent (bottom right)
-    this.addQuadrantLabel('Q3', midX + quarterWidth, midY + quarterHeight, 'Not Important & Urgent');
-    
-    // Q4: Not Important & Not Urgent (bottom left)
-    this.addQuadrantLabel('Q4', midX - quarterWidth, midY + quarterHeight, 'Not Important & Not Urgent');
+    // If we already have tasks, render them immediately
+    if (this.tasks && this.tasks.length > 0) {
+      this.renderChart(this.tasks);
+    }
   }
   
   initializeCompletionChart() {
@@ -486,74 +475,6 @@ export class TaskManager {
     // Get accent color from CSS variable or fallback to default
     const style = getComputedStyle(document.documentElement);
     return style.getPropertyValue('--accent-color').trim() || '#4285f4';
-  }
-
-  addQuadrantLabel(text, x, y, description) {
-    // Create group for the label
-    const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    labelGroup.classList.add('quadrant-label');
-    
-    // Determine color based on quadrant
-    let color;
-    switch(text) {
-      case 'Q1': color = 'var(--q1-color, #f72585)'; break;
-      case 'Q2': color = 'var(--q2-color, #4caf50)'; break;
-      case 'Q3': color = 'var(--q3-color, #ff9800)'; break;
-      case 'Q4': color = 'var(--q4-color, #2196f3)'; break;
-      default: color = this.isDarkTheme ? '#DDD' : '#333';
-    }
-    
-    // Create background/container for the label - larger boxes for better visibility
-    const bgWidth = description ? 160 : 50; // Increased width
-    const bgHeight = description ? 55 : 36; // Increased height
-    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bgRect.setAttribute('x', x - bgWidth/2);
-    bgRect.setAttribute('y', y - 20); // Adjusted y position
-    bgRect.setAttribute('width', bgWidth);
-    bgRect.setAttribute('height', bgHeight);
-    bgRect.setAttribute('rx', '6');
-    bgRect.setAttribute('ry', '6');
-    bgRect.setAttribute('fill', this.isDarkTheme ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.9)');
-    bgRect.setAttribute('stroke', color);
-    bgRect.setAttribute('stroke-width', '2'); // Thicker border for emphasis
-    // Add drop shadow for depth
-    bgRect.setAttribute('filter', 'drop-shadow(0px 2px 3px rgba(0,0,0,0.15))');
-    labelGroup.appendChild(bgRect);
-    
-    // Add main label - larger and more prominent
-    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    label.setAttribute('x', x);
-    label.setAttribute('y', y);
-    label.setAttribute('text-anchor', 'middle');
-    label.setAttribute('font-weight', 'bold');
-    label.setAttribute('fill', color);
-    label.setAttribute('font-size', '18px'); // Increased from 16px
-    label.textContent = text;
-    labelGroup.appendChild(label);
-    
-    // Add description below - improved readability
-    if (description) {
-      const descText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      descText.setAttribute('x', x);
-      descText.setAttribute('y', y + 20); // Increased spacing
-      descText.setAttribute('text-anchor', 'middle');
-      descText.setAttribute('fill', this.isDarkTheme ? '#BBB' : '#666');
-      descText.setAttribute('font-size', '11px'); // Increased from 10px
-      descText.textContent = description;
-      labelGroup.appendChild(descText);
-    }
-    
-    // Add the label group to the annotations group
-    if (this.annotationsGroup) {
-      this.annotationsGroup.appendChild(labelGroup);
-    } else {
-      console.error('Cannot add quadrant label: annotations group not available');
-      if (this.chartGroup) {
-        this.chartGroup.appendChild(labelGroup);
-      }
-    }
-    
-    return labelGroup;
   }
 
   handleData(data) {
@@ -1098,10 +1019,20 @@ export class TaskManager {
       });
     }
     
-    // Initialize chart if not already done
-    if (!this.chartGroup) {
-      this.initializeChart();
+    // Initialize chart immediately
+    this.initializeChart();
+    
+    // If we already have tasks data, render the chart immediately
+    if (this.tasks && this.tasks.length > 0) {
+      this.renderChart(this.tasks);
     }
+    
+    // Add a small delay to ensure chart renders even if socket data is slow
+    setTimeout(() => {
+      if (this.tasks && this.tasks.length > 0) {
+        this.renderChart(this.tasks);
+      }
+    }, 500);
     
     // Emit an event to let consumers know we're initialized
     this.emitUpdate();

@@ -16,70 +16,18 @@
     <div id="notification-container"></div>
     
     <div id="app" class="container" :data-theme="currentTheme" :class="{'dark-theme': isDarkTheme}">
-        <header class="app-header">
-            <h1 class="app-title">Priority Task Manager</h1>
-            <div class="header-controls">
-                <button @click="toggleTheme" class="theme-toggle" :aria-label="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'">
-                    <i :class="isDarkTheme ? 'fas fa-sun' : 'fas fa-moon'"></i>
-                </button>
-                <button @click="showStatsView = !showStatsView" class="stats-toggle" :class="{ active: showStatsView }">
-                    <i class="fas fa-chart-pie"></i> {{ showStatsView ? 'Hide Stats' : 'Show Stats' }}
-                </button>
-            </div>
-        </header>
+        <div class="global-controls">
+            <button @click="toggleTheme" class="theme-toggle" :aria-label="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'">
+                <i :class="isDarkTheme ? 'fas fa-sun' : 'fas fa-moon'"></i>
+            </button>
+        </div>
 
         <div class="chart-container">
             <div id="taskChart"></div>
         </div>
 
-        <!-- Statistics View - New Section -->
-        <div class="stats-view" v-if="showStatsView">
-            <h2>Task Statistics</h2>
-            <div class="stats-container">
-                <!-- Completion Stats -->
-                <div class="stats-card">
-                    <h3>Completion Statistics</h3>
-                    <div class="stats-item">
-                        <div class="stats-label">Tasks Completed:</div>
-                        <div class="stats-value">{{ completedTasks.length }}</div>
-                    </div>
-                    <div class="stats-item">
-                        <div class="stats-label">Completion Rate:</div>
-                        <div class="stats-value">{{ Math.round((completedTasks.length / (activeTasks.length + completedTasks.length)) * 100) || 0 }}%</div>
-                    </div>
-                </div>
-                
-                <!-- Quadrant Stats -->
-                <div class="stats-card">
-                    <h3>Tasks by Quadrant</h3>
-                    <div class="stats-item" v-for="(count, quadrant) in tasksByQuadrant" :key="quadrant">
-                        <div class="stats-label">{{ quadrantLabels[quadrant] }}:</div>
-                        <div class="stats-value">{{ count }}</div>
-                    </div>
-                </div>
-                
-                <!-- Time Stats -->
-                <div class="stats-card">
-                    <h3>Time Analysis</h3>
-                    <div class="stats-item">
-                        <div class="stats-label">Average Time to Complete:</div>
-                        <div class="stats-value">{{ averageCompletionTime }}</div>
-                    </div>
-                    <div class="stats-item">
-                        <div class="stats-label">Most Productive Day:</div>
-                        <div class="stats-value">{{ mostProductiveDay }}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Completion Timeline Chart -->
-            <div class="timeline-chart">
-                <h3>Completion Timeline</h3>
-                <div id="completionChart"></div>
-            </div>
-        </div>
-
-        <form class="task-form" @submit.prevent="submitTask">
+        <!-- Task form -->
+        <form @submit.prevent="submitTask" class="task-form">
             <div class="form-group">
                 <label class="form-label" for="taskName">Task Name</label>
                 <input 
@@ -89,6 +37,18 @@
                     class="form-input"
                     placeholder="Enter task name"
                     required
+                >
+            </div>
+            
+            <!-- Add link input field -->
+            <div class="form-group">
+                <label class="form-label" for="taskLink">Link (optional)</label>
+                <input 
+                    type="text" 
+                    id="taskLink" 
+                    v-model="taskLink"
+                    class="form-input"
+                    placeholder="Add a URL (http://example.com)"
                 >
             </div>
 
@@ -128,111 +88,139 @@
         <!-- Task list -->
         <div class="task-container">
             <!-- Active Tasks Section -->
-            <section class="task-section" id="active-tasks">
-                <div class="section-header">
-                    <h2>Active Tasks ({{ activeTasks.length }})</h2>
-                    <div class="subtasks-filter-controls">
-                        <button class="subtasks-filter-toggle" @click="toggleCompletedSubtasks">
-                            <i class="fas" :class="showCompletedSubtasks ? 'fa-eye' : 'fa-eye-slash'"></i>
-                            {{ showCompletedSubtasks ? 'Hide' : 'Show' }} Completed Subtasks
-                        </button>
+            <div class="active-tasks-container">
+                <section class="task-section" id="active-tasks">
+                    <div class="section-header">
+                        <h2>Active Tasks ({{ activeTasks.length }})</h2>
+                        <div class="subtasks-filter-controls">
+                            <button class="subtasks-filter-toggle" @click="toggleCompletedSubtasks">
+                                <i class="fas" :class="showCompletedSubtasks ? 'fa-eye' : 'fa-eye-slash'"></i>
+                                {{ showCompletedSubtasks ? 'Hide' : 'Show' }} Completed Subtasks
+                            </button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="task-table-container" v-if="taskSectionOpen.active">
-                    <table class="task-table">
-                        <tbody>
-                            <!-- For each parent task -->
-                            <template v-for="task in activeTasks" :key="task.id">
-                                <!-- Parent task row -->
-                                <tr class="task vue-task-item" 
-                                    :data-task-id="task.id" 
-                                    @click="selectTask(task)">
-                                    <td class="task-info">
-                                        <div class="task-info-content">
-                                            <input type="checkbox" class="task-checkbox" @click.stop="toggleTaskDone(task)">
-                                            <div class="task-name-container">
-                                                <span class="task-name">{{ task.name }}</span>
-                                                <span class="task-date" v-if="task.due_date">Due: {{ formatDate(task.due_date) }}</span>
-                                                
-                                                <!-- Add metrics gauges -->
-                                                <div class="metrics-gauges">
-                                                    <div class="metric-gauge">
-                                                        <div class="gauge-label">Importance</div>
-                                                        <div class="gauge-container">
-                                                            <div class="gauge-bar importance-bar" :style="{ width: (task.importance * 10) + '%', backgroundColor: task.importance > 7 ? 'var(--q1-color, #ff5252)' : task.importance > 4 ? 'var(--q2-color, #4caf50)' : task.importance > 2 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)' }"></div>
-                                                            <span class="gauge-value">{{task.importance}}</span>
+                    
+                    <div class="task-table-container" v-if="taskSectionOpen.active">
+                        <table class="task-table">
+                            <tbody>
+                                <!-- For each parent task -->
+                                <template v-for="task in activeTasks" :key="task.id">
+                                    <!-- Parent task row -->
+                                    <tr class="task vue-task-item" 
+                                        :data-task-id="task.id" 
+                                        @click="selectTask(task)">
+                                        <td class="task-info">
+                                            <div class="task-info-content">
+                                                <input type="checkbox" class="task-checkbox" @click.stop="toggleTaskDone(task)">
+                                                <div class="task-name-container">
+                                                    <span class="task-name">{{ task.name }}</span>
+                                                    <span class="task-date" v-if="task.due_date">Due: {{ formatDate(task.due_date) }}</span>
+                                                    
+                                                    <!-- Display task link if present -->
+                                                    <a v-if="task.link" 
+                                                       :href="task.link" 
+                                                       class="task-link" 
+                                                       target="_blank"
+                                                       @click.stop>
+                                                        <i class="fas fa-link"></i> {{ formatLinkDisplay(task.link) }}
+                                                    </a>
+                                                    
+                                                    <!-- Add metrics gauges -->
+                                                    <div class="metrics-gauges">
+                                                        <div class="metric-gauge">
+                                                            <div class="gauge-label">Importance</div>
+                                                            <div class="gauge-container">
+                                                                <div class="gauge-bar importance-bar" :style="{ width: (task.importance * 10) + '%', backgroundColor: task.importance > 7 ? 'var(--q1-color, #ff5252)' : task.importance > 4 ? 'var(--q2-color, #4caf50)' : task.importance > 2 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)' }"></div>
+                                                                <span class="gauge-value">{{task.importance}}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div class="metric-gauge">
-                                                        <div class="gauge-label">Urgency</div>
-                                                        <div class="gauge-container">
-                                                            <div class="gauge-bar urgency-bar" :style="{ width: (task.urgency * 10) + '%', backgroundColor: task.urgency > 7 ? 'var(--q1-color, #ff5252)' : task.urgency > 4 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)' }"></div>
-                                                            <span class="gauge-value">{{task.urgency}}</span>
+                                                        <div class="metric-gauge">
+                                                            <div class="gauge-label">Urgency</div>
+                                                            <div class="gauge-container">
+                                                                <div class="gauge-bar urgency-bar" :style="{ width: (task.urgency * 10) + '%', backgroundColor: task.urgency > 7 ? 'var(--q1-color, #ff5252)' : task.urgency > 4 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)' }"></div>
+                                                                <span class="gauge-value">{{task.urgency}}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td class="task-metrics">
-                                        <button class="add-subtask-btn" @click.stop="showAddSubtaskForm(task.id)">
-                                            <i class="fas fa-plus"></i> Add
-                                        </button>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Subtasks directly after the parent task -->
-                                <tr v-if="getSubtasksForTask(task.id).length > 0" class="subtasks-row">
-                                    <td colspan="2" class="subtasks-cell">
-                                        <div class="subtasks-container">
-                                            <table class="subtask-table">
-                                                <tbody>
-                                                    <tr v-for="subtask in getSubtasksForTask(task.id)" 
-                                                        :key="subtask.id" 
-                                                        class="subtask" 
-                                                        :class="{'completed': subtask.done, 'hidden': subtask.done && !showCompletedSubtasks}"
-                                                        :data-subtask-id="subtask.id">
-                                                        <td class="subtask-info">
-                                                            <div class="subtask-status" 
-                                                                :class="{ 'completed': subtask.done }" 
-                                                                @click.stop="toggleTaskDone(subtask)">
-                                                                <i v-if="subtask.done" class="fas fa-check"></i>
-                                                            </div>
-                                                            <span class="subtask-name" :class="{ 'completed': subtask.done }">
-                                                                {{ subtask.name }}
-                                                            </span>
-                                                            <!-- Add metrics gauges for subtasks -->
-                                                            <div class="metrics-gauges subtask-gauges">
-                                                                <div class="metric-gauge">
-                                                                    <div class="gauge-label">I</div>
-                                                                    <div class="gauge-container">
-                                                                        <div class="gauge-bar importance-bar" :style="{ width: (subtask.importance * 10) + '%', backgroundColor: subtask.importance > 7 ? 'var(--q1-color, #ff5252)' : subtask.importance > 4 ? 'var(--q2-color, #4caf50)' : subtask.importance > 2 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)', opacity: subtask.done ? '0.6' : '1' }"></div>
-                                                                        <span class="gauge-value">{{subtask.importance}}</span>
+                                        </td>
+                                        <td class="task-metrics">
+                                            <button class="add-subtask-btn" @click.stop="showAddSubtaskForm(task.id)">
+                                                <i class="fas fa-plus"></i> Add
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Subtasks directly after the parent task -->
+                                    <tr v-if="getSubtasksForTask(task.id).length > 0" class="subtasks-row">
+                                        <td colspan="2" class="subtasks-cell">
+                                            <div class="subtasks-container">
+                                                <table class="subtask-table">
+                                                    <tbody>
+                                                        <tr v-for="subtask in getSubtasksForTask(task.id)" 
+                                                            :key="subtask.id" 
+                                                            class="subtask" 
+                                                            :class="{'completed': subtask.done, 'hidden': subtask.done && !showCompletedSubtasks}"
+                                                            :data-subtask-id="subtask.id">
+                                                            <td class="subtask-info">
+                                                                <div class="subtask-status" 
+                                                                    :class="{ 'completed': subtask.done }" 
+                                                                    @click.stop="toggleTaskDone(subtask)">
+                                                                    <i v-if="subtask.done" class="fas fa-check"></i>
+                                                                </div>
+                                                                <span class="subtask-name" :class="{ 'completed': subtask.done }">
+                                                                    {{ subtask.name }}
+                                                                </span>
+                                                                
+                                                                <!-- Display subtask link if present -->
+                                                                <a v-if="subtask.link" 
+                                                                   :href="subtask.link" 
+                                                                   class="task-link subtask-link" 
+                                                                   target="_blank"
+                                                                   @click.stop>
+                                                                    <i class="fas fa-link"></i> {{ formatLinkDisplay(subtask.link) }}
+                                                                </a>
+                                                                
+                                                                <!-- Add metrics gauges for subtasks -->
+                                                                <div class="metrics-gauges subtask-gauges">
+                                                                    <div class="metric-gauge">
+                                                                        <div class="gauge-label">I</div>
+                                                                        <div class="gauge-container">
+                                                                            <div class="gauge-bar importance-bar" :style="{ width: (subtask.importance * 10) + '%', backgroundColor: subtask.importance > 7 ? 'var(--q1-color, #ff5252)' : subtask.importance > 4 ? 'var(--q2-color, #4caf50)' : subtask.importance > 2 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)', opacity: subtask.done ? '0.6' : '1' }"></div>
+                                                                            <span class="gauge-value">{{subtask.importance}}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="metric-gauge">
+                                                                        <div class="gauge-label">U</div>
+                                                                        <div class="gauge-container">
+                                                                            <div class="gauge-bar urgency-bar" :style="{ width: (subtask.urgency * 10) + '%', backgroundColor: subtask.urgency > 7 ? 'var(--q1-color, #ff5252)' : subtask.urgency > 4 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)', opacity: subtask.done ? '0.6' : '1' }"></div>
+                                                                            <span class="gauge-value">{{subtask.urgency}}</span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                                <div class="metric-gauge">
-                                                                    <div class="gauge-label">U</div>
-                                                                    <div class="gauge-container">
-                                                                        <div class="gauge-bar urgency-bar" :style="{ width: (subtask.urgency * 10) + '%', backgroundColor: subtask.urgency > 7 ? 'var(--q1-color, #ff5252)' : subtask.urgency > 4 ? 'var(--q3-color, #2196f3)' : 'var(--q4-color, #9e9e9e)', opacity: subtask.done ? '0.6' : '1' }"></div>
-                                                                        <span class="gauge-value">{{subtask.urgency}}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td class="subtask-metrics">
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                                                            </td>
+                                                            <td class="subtask-metrics">
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        
+                        <!-- Empty drop area for converting subtasks to main tasks -->
+                        <div class="empty-drop-area" 
+                             id="empty-drop-area" 
+                             ref="emptyDropArea">
+                            Drop subtasks here to convert to main tasks
+                        </div>
+                    </div>
+                </section>
+            </div>
             
             <!-- Completed Tasks Section with Toggle -->
             <div class="task-section" id="completed-tasks" v-if="hasCompletedTasks">
@@ -255,6 +243,15 @@
                                             <div class="task-name-container">
                                                 <span class="task-name">{{ task.name }}</span>
                                                 <span class="task-date" v-if="task.completed_at">Completed: {{ formatDate(task.completed_at) }}</span>
+                                                
+                                                <!-- Display task link if present -->
+                                                <a v-if="task.link" 
+                                                   :href="task.link" 
+                                                   class="task-link" 
+                                                   target="_blank"
+                                                   @click.stop>
+                                                    <i class="fas fa-link"></i> {{ formatLinkDisplay(task.link) }}
+                                                </a>
                                                 
                                                 <!-- Add metrics gauges for completed tasks -->
                                                 <div class="metrics-gauges">
@@ -303,6 +300,16 @@
                                                             <span class="subtask-name" :class="{ 'completed': subtask.done }">
                                                                 {{ subtask.name }}
                                                             </span>
+                                                                
+                                                            <!-- Display subtask link if present -->
+                                                            <a v-if="subtask.link" 
+                                                               :href="subtask.link" 
+                                                               class="task-link subtask-link" 
+                                                               target="_blank"
+                                                               @click.stop>
+                                                                <i class="fas fa-link"></i> {{ formatLinkDisplay(subtask.link) }}
+                                                            </a>
+                                                            
                                                             <!-- Add metrics gauges for subtasks -->
                                                             <div class="metrics-gauges subtask-gauges">
                                                                 <div class="metric-gauge">
@@ -349,6 +356,18 @@
                         class="form-input"
                         placeholder="Enter subtask name"
                         required
+                    >
+                </div>
+                
+                <!-- Add link input field for subtask edit -->
+                <div class="form-group">
+                    <label class="form-label" for="editSubtaskLink">Link (optional)</label>
+                    <input 
+                        type="text" 
+                        id="editSubtaskLink" 
+                        v-model="editingSubtask.link"
+                        class="form-input"
+                        placeholder="Add a URL (http://example.com)"
                     >
                 </div>
 
@@ -416,6 +435,13 @@
                         <label for="subtask-name">Subtask Name</label>
                         <input type="text" id="subtask-name" v-model="newSubtask.name" required>
                     </div>
+                    
+                    <!-- Add link input field for new subtask -->
+                    <div class="form-group">
+                        <label for="subtask-link">Link (optional)</label>
+                        <input type="text" id="subtask-link" v-model="newSubtask.link" placeholder="Add a URL (http://example.com)">
+                    </div>
+                    
                     <div class="form-group">
                         <label for="subtask-importance">Importance (1-10)</label>
                         <input type="range" id="subtask-importance" v-model.number="newSubtask.importance" min="1" max="10" step="1">

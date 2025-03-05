@@ -65,7 +65,7 @@ body {
 .container {
     max-width: 1200px;
     width: 95%;
-    margin: 0 auto;
+  margin: 0 auto;
     padding: 20px;
     color: var(--text-primary);
     background-color: var(--background-primary);
@@ -90,21 +90,33 @@ h1 {
 .task-form {
     margin-bottom: 2.5rem;
     background: var(--background-primary);
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    padding: 1.8rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 2px 10px 0 rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .dark-theme .task-form {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.2), 0 2px 10px 0 rgba(0, 0, 0, 0.15);
 }
 
 .form-title {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.25rem;
+    font-weight: 500;
     margin-bottom: 1.5rem;
     color: var(--text-primary);
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.form-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background-color: var(--primary-color);
 }
 
 .form-row {
@@ -115,6 +127,7 @@ h1 {
 
 .form-group {
     flex: 1;
+    position: relative;
 }
 
 label {
@@ -122,75 +135,176 @@ label {
     margin-bottom: 0.5rem;
     font-weight: 500;
     color: var(--text-secondary);
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
 }
 
+/* Material Design Input Fields */
 input[type="text"] {
     width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #e0e0e0;
-    background-color: var(--background-primary);
+    padding: 0.8rem 0.5rem;
+    border: none;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+    background-color: transparent;
     color: var(--text-primary);
     font-size: 1rem;
+    transition: border-color 0.3s ease;
+    outline: none;
+}
+
+input[type="text"]:focus {
+    border-bottom: 2px solid var(--primary-color);
+}
+
+input[type="text"]::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+    transition: opacity 0.2s ease;
+}
+
+input[type="text"]:focus::placeholder {
+    opacity: 0.7;
 }
 
 .dark-theme input[type="text"] {
-    border: 1px solid #333;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    color: var(--dark-text-primary);
+}
+
+.dark-theme input[type="text"]:focus {
+    border-bottom: 2px solid var(--primary-color-light);
+}
+
+.dark-theme input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .slider-group {
     background: var(--background-secondary);
     padding: 1.2rem;
-    border-radius: var(--border-radius);
-    transition: background-color var(--transition-speed);
+    border-radius: 6px;
+    margin-top: 0.5rem;
 }
 
+/* Material Design Sliders */
 input[type="range"] {
     -webkit-appearance: none;
     width: 100%;
-    height: 6px;
-    margin: 0.8rem 0;
-    background: linear-gradient(to right, var(--primary-color-dark), var(--primary-color-light));
-    border-radius: 3px;
+    height: 4px;
+    background: linear-gradient(to right, var(--primary-color-light), var(--primary-color));
     outline: none;
+    border-radius: 10px;
+    margin-top: 0.8rem;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     width: 18px;
     height: 18px;
-    background: var(--primary-color);
     border-radius: 50%;
+    background: var(--primary-color);
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
 }
 
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+input[type="range"]::-ms-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.dark-theme input[type="range"] {
+    background: linear-gradient(to right, var(--primary-color-dark), var(--primary-color));
+}
+
+.dark-theme input[type="range"]::-webkit-slider-thumb {
+    background: var(--primary-color-light);
+}
+
+/* Material Design Buttons */
 .btn {
     background: var(--primary-color);
     color: white;
     border: none;
-    padding: 0.9rem 1.8rem;
-    font-size: 1rem;
-    font-weight: 600;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
     cursor: pointer;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ripple effect */
+.btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%, -50%);
+    transform-origin: 50% 50%;
+}
+
+.btn:focus:not(:active)::after {
+    animation: ripple 0.6s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(150, 150);
+        opacity: 0;
+    }
 }
 
 .btn:hover {
     background: var(--primary-color-light);
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     transform: translateY(-1px);
 }
 
 .btn:active {
     transform: translateY(1px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary {
@@ -203,19 +317,59 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .btn-secondary {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: var(--text-secondary);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background-color: transparent;
+    color: var(--primary-color);
+    box-shadow: none;
+    border: 1px solid rgba(var(--primary-color-rgb), 0.5);
 }
 
 .dark-theme .btn-secondary {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--dark-text-secondary);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .btn-secondary:hover {
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+    border: 1px solid var(--primary-color);
+}
+
+/* Flat buttons */
+.btn-flat {
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--primary-color);
+    font-weight: 500;
+    padding: 0.7rem 1.2rem;
+}
+
+.btn-flat:hover {
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+    box-shadow: none;
+}
+
+.btn-flat:active {
+    background-color: rgba(var(--primary-color-rgb), 0.1);
+}
+
+.dark-theme .btn-flat {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.dark-theme .btn-flat:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Disabled state */
+.btn:disabled, .btn.disabled {
+    background-color: rgba(0, 0, 0, 0.12);
+    color: rgba(0, 0, 0, 0.38);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.dark-theme .btn:disabled, .dark-theme .btn.disabled {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.38);
 }
 
 /* Task table styles */
@@ -250,11 +404,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .task {
-    transition: background-color var(--transition-speed);
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
 .task:hover {
-    background-color: var(--background-secondary);
+    background-color: rgba(var(--primary-color-rgb), 0.05);
 }
 
 .task.selected {
@@ -262,12 +419,27 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .task.done {
-    background-color: rgba(0, 0, 0, 0.03);
+    opacity: 0.6;
 }
 
 .dark-theme .task.done {
-    background-color: rgba(255, 255, 255, 0.05);
+    opacity: 0.5;
 }
+
+/* Add drag and drop styles */
+.task.dragging, .subtask.dragging {
+    opacity: 0.7;
+    background-color: rgba(var(--primary-color-rgb), 0.2);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    cursor: grabbing;
+}
+
+.task.drag-over, .subtask.drag-over {
+    border: 2px dashed var(--primary-color);
+    background-color: rgba(var(--primary-color-rgb), 0.08);
+}
+
+/* End of drag and drop styles */
 
 .task-info {
     width: 85%;
@@ -299,8 +471,47 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .task-date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+}
+
+/* Task link styles */
+.task-link {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--primary-color);
+    margin-left: 0.5rem;
+    text-decoration: none;
+    border-bottom: 1px dotted;
+    transition: all 0.2s ease;
+    padding: 0 0.35rem;
+}
+
+.task-link i {
+    margin-right: 0.35rem;
     font-size: 0.8rem;
-    color: var(--text-tertiary);
+}
+
+.task-link:hover {
+    color: var(--primary-color-dark);
+    background-color: rgba(var(--primary-color-rgb), 0.1);
+    border-radius: 3px;
+}
+
+.dark-theme .task-link {
+    color: var(--primary-color-light);
+}
+
+.dark-theme .task-link:hover {
+    color: var(--primary-color-light);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.subtask-link {
+    font-size: 0.75rem;
+    padding: 0 0.25rem;
 }
 
 .task-metrics {
@@ -471,10 +682,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* Priority chart styles */
 .chart-container {
     position: relative;
-    width: 80%;
-    height: 80vh;
-    min-height: 400px;
-    max-height: 800px;
+    width: 100%;
+    height: 90vh;
+    min-height: 500px;
+    max-height: 1000px;
     background: var(--background-primary);
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -536,7 +747,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
+  width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
@@ -636,7 +847,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .notification-icon {
-    font-size: 16px;
+  font-size: 16px;
 }
 
 .notification-message {
@@ -777,7 +988,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 @media (max-width: 480px) {
     .container {
-        width: 100%;
+  width: 100%;
         padding: 10px;
     }
     
@@ -901,4 +1112,71 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-size: 10px;
   font-weight: 600;
   right: 2px;
+}
+
+/* Active Tasks Container - matches chart container style */
+.active-tasks-container {
+    position: relative;
+    width: 100%;
+    background: var(--background-primary);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin: 0 auto 20px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    padding: 20px;
+}
+
+.dark-theme .active-tasks-container {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.active-tasks-container .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.active-tasks-container .section-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Add empty area drop target */
+.empty-drop-area {
+    min-height: 100px;
+    border: 2px dashed rgba(var(--primary-color-rgb), 0.2);
+    border-radius: 8px;
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.empty-drop-area.drag-over {
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+    border-color: var(--primary-color);
+}
+
+.dark-theme .empty-drop-area {
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.dark-theme .empty-drop-area.drag-over {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary-color-light);
+}
+
+/* Global controls for the app */
+.global-controls {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 0;
+    margin-bottom: 10px;
 }
