@@ -63,80 +63,120 @@ export class TaskOperations {
   addSubtask(subtask, parentId) {
     console.log('TaskOperations.addSubtask called with:', subtask, 'parentId:', parentId);
     
-    // Find parent task name for better notification
-    let parentName = "Unknown";
-    if (this.taskManager.tasks && Array.isArray(this.taskManager.tasks)) {
-      const parentTask = this.taskManager.tasks.find(t => t.id === parentId);
+    // Find parent task name safely
+    let parentName = "Unknown Task";
+    
+    // Try to get tasks from window.app instead of this.taskManager
+    if (window.app && Array.isArray(window.app.tasks)) {
+      const parentTask = window.app.tasks.find(t => t.id === parentId);
       if (parentTask) {
         parentName = parentTask.name;
       }
     }
     
-    // Define one-time handler for subtask added response
-    const onSubtaskAdded = (response) => {
-      console.log('Subtask added response:', response);
-      if (response && response.success) {
-        this.showNotification(`Added subtask "${subtask.name}" to "${parentName}"`, 'success', '✅');
+    // Get socket from window.app or create a new one
+    const socket = window.app?.socket || 
+                  (typeof io !== 'undefined' ? io(window.location.origin) : null);
+    
+    if (!socket) {
+      console.error('No socket connection available');
+      if (window.app?.showNotification) {
+        window.app.showNotification('Connection error, try refreshing the page', 'error');
       }
-      // Remove the listener to avoid accumulating handlers
-      this.taskManager.socket.off('updateTasks', onSubtaskAdded);
-    };
+      return;
+    }
     
-    // Listen for response
-    this.taskManager.socket.once('updateTasks', onSubtaskAdded);
+    // Send the request directly using the socket
+    socket.emit('addSubtask', { subtask, parentId });
+    console.log('Emitted addSubtask event to server');
     
-    // Send the request
-    this.taskManager.socket.emit('addSubtask', { subtask, parentId });
+    // Set a one-time listener for task updates
+    socket.once('updateTasks', (response) => {
+      console.log('Received response after adding subtask');
+      
+      // Show notification if possible
+      if (window.app?.showNotification) {
+        window.app.showNotification(`Added subtask "${subtask.name}" to "${parentName}"`, 'success');
+      } else {
+        console.log(`Added subtask "${subtask.name}" to "${parentName}"`);
+      }
+    });
   }
 
   updateSubtask(subtask) {
     console.log('TaskOperations.updateSubtask called with:', subtask);
     
-    // Store original subtask data for comparison if available
-    let originalSubtask = null;
-    if (this.taskManager.tasks && Array.isArray(this.taskManager.tasks)) {
-      originalSubtask = this.taskManager.tasks.find(t => t.id === subtask.id);
+    // Get socket safely
+    const socket = window.app?.socket || 
+                  (typeof io !== 'undefined' ? io(window.location.origin) : null);
+    
+    if (!socket) {
+      console.error('No socket connection available');
+      return;
     }
     
-    // Define one-time handler for subtask updated response
-    const onSubtaskUpdated = (response) => {
-      console.log('Subtask updated response:', response);
-      if (response) {
-        // Determine what was changed for a more informative notification
-        let changeDescription = "Updated subtask";
+    // Find original subtask for comparison
+    let originalSubtask = null;
+    if (window.app?.tasks) {
+      originalSubtask = window.app.tasks.find(t => t.id === subtask.id);
+    }
+    
+    // Send the update
+    socket.emit('updateSubtask', subtask);
+    
+    // Handle response
+    socket.once('updateTasks', () => {
+      // Create message about what changed
+      let message = "Updated subtask";
+      if (originalSubtask) {
+        const changes = [];
+        if (originalSubtask.name !== subtask.name) changes.push("name");
+        if (originalSubtask.importance !== subtask.importance) changes.push("importance");
+        if (originalSubtask.urgency !== subtask.urgency) changes.push("urgency");
         
-        if (originalSubtask) {
-          const changes = [];
-          if (originalSubtask.name !== subtask.name) {
-            changes.push("name");
-          }
-          if (originalSubtask.importance !== subtask.importance || 
-              originalSubtask.urgency !== subtask.urgency) {
-            changes.push("priority");
-          }
-          if (originalSubtask.parent_id !== subtask.parent_id) {
-            changes.push("parent task");
-          }
-          
-          if (changes.length > 0) {
-            changeDescription += ": " + changes.join(", ");
-          }
-          
-          this.showNotification(changeDescription, 'success', '✅');
+        if (changes.length > 0) {
+          message += ": " + changes.join(", ");
         }
       }
-      // Remove the listener to avoid accumulating handlers
-      this.taskManager.socket.off('updateTasks', onSubtaskUpdated);
-    };
-    
-    // Listen for response
-    this.taskManager.socket.once('updateTasks', onSubtaskUpdated);
-    
-    // Send the request
-    this.taskManager.socket.emit('updateSubtask', subtask);
+      
+      // Show notification
+      if (window.app?.showNotification) {
+        window.app.showNotification(message, 'success');
+      } else {
+        console.log(message);
+      }
+    });
   }
 
   showNotification(message, type = 'default', icon = '📢') {
-    // Implementation of showNotification method
+    // Use app's notification system if available
+    if (window.app?.showNotification) {
+      window.app.showNotification(message, type);
+      return;
+    }
+    
+    // Otherwise create a simple notification
+    console.log(`${icon} ${message}`);
+    
+    const notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.bottom = '20px';
+    notification.style.right = '20px';
+    notification.style.padding = '12px 20px';
+    notification.style.background = type === 'success' ? '#4CAF50' : 
+                                   type === 'error' ? '#F44336' : '#2196F3';
+    notification.style.color = 'white';
+    notification.style.borderRadius = '4px';
+    notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    notification.style.zIndex = '9999';
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.3s';
+      setTimeout(() => document.body.removeChild(notification), 300);
+    }, 3000);
   }
 } 

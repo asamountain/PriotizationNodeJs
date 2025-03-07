@@ -29,6 +29,80 @@
       .selected-dot {
         filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
       }
+      
+      /* Add these styles for better tooltip appearance and positioning */
+      .chart-tooltip {
+        font-family: 'Roboto', sans-serif;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+        max-width: 300px;
+        word-wrap: break-word;
+        overflow: hidden;
+      }
+      
+      .chart-tooltip-header {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        font-weight: 500;
+      }
+      
+      .chart-tooltip-body {
+        padding: 10px 14px;
+      }
+      
+      /* Make task dots more visible on hover */
+      .task-dot:hover {
+        stroke: white;
+        stroke-width: 2px;
+        transition: all 0.2s ease;
+      }
+      
+      /* Selected dot style */
+      .selected-dot {
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+      }
+      
+      /* Ensure the chart container has proper overflow handling */
+      #taskChart {
+        overflow: visible !important;
+        position: relative;
+      }
+      
+      /* Add these styles to support the cluster and line-connected tooltips */
+      .task-dot.cluster-dot {
+        opacity: 0.9;
+        transition: all 0.3s ease;
+      }
+      
+      .task-dot.mini-dot {
+        opacity: 0.85;
+        transition: none;
+      }
+      
+      .task-dot.mini-dot:hover {
+        opacity: 0.85;
+        transform: none;
+      }
+      
+      .cluster-expansion {
+        animation: fade-in 0.3s ease-out;
+      }
+      
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      
+      /* Ensure the chart container can show content outside its boundaries */
+      .v-card-text {
+        overflow: visible !important;
+      }
+      
+      #taskChart {
+        overflow: visible !important;
+        z-index: 1;
+      }
     </style>
 </head>
 <body>

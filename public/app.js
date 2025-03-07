@@ -304,11 +304,8 @@ window.addEventListener('DOMContentLoaded', () => {
           document.body.classList.add('dark-theme');
       }
       
-      // Mount the app to the DOM
-      const vueApp = this.$mount();
-      
       // Make app globally available
-      window.app = vueApp;
+      window.app = this;
       
       // Dispatch event to signal that app is mounted
       window.dispatchEvent(new Event('app-mounted'));
@@ -319,10 +316,10 @@ window.addEventListener('DOMContentLoaded', () => {
   app.use(vuetify);
   
   // Mount the app to the DOM
-  const vueApp = app.mount('#app');
+  app.mount('#app');
   
   // Make app globally available
-  window.app = vueApp;
+  window.app = app._instance.proxy;
 });
 
 // Now these exports will be valid since the variables are defined at the top level

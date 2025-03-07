@@ -28,6 +28,9 @@ export class ChartVisualization {
         return;
       }
       
+      // Ensure chart container allows overflow
+      container.style.overflow = 'visible';
+      
       // Clear container
       container.innerHTML = '';
       
@@ -281,38 +284,46 @@ export class ChartVisualization {
   }
   
   addVuetifyQuadrantLabels(parentGroup) {
-    // Q1: Important & Urgent
+    // Define quadrant boundaries
+    const quadrantCoords = {
+      q1: { x: 580, y: 170 }, // Important & Urgent (top-right)
+      q2: { x: 580, y: 430 }, // Important & Not Urgent (bottom-right)
+      q3: { x: 220, y: 170 }, // Not Important & Urgent (top-left)
+      q4: { x: 220, y: 430 }  // Not Important & Not Urgent (bottom-left)
+    };
+    
+    // Q1: Important & Urgent (top-right)
     this.createVuetifyChip(
       parentGroup, 
-      730, 
-      60, 
+      quadrantCoords.q1.x, 
+      quadrantCoords.q1.y, 
       'Important & Urgent', 
       this.vuetifyColors.error
     );
     
-    // Q2: Important & Not Urgent
+    // Q2: Important & Not Urgent (bottom-right)
     this.createVuetifyChip(
       parentGroup, 
-      730, 
-      320, 
+      quadrantCoords.q2.x, 
+      quadrantCoords.q2.y, 
       'Important & Not Urgent', 
       this.vuetifyColors.success
     );
     
-    // Q3: Not Important & Urgent
+    // Q3: Not Important & Urgent (top-left)
     this.createVuetifyChip(
       parentGroup, 
-      70, 
-      60, 
+      quadrantCoords.q3.x, 
+      quadrantCoords.q3.y, 
       'Not Important & Urgent', 
       this.vuetifyColors.warning
     );
     
-    // Q4: Not Important & Not Urgent
+    // Q4: Not Important & Not Urgent (bottom-left)
     this.createVuetifyChip(
       parentGroup, 
-      70, 
-      320, 
+      quadrantCoords.q4.x, 
+      quadrantCoords.q4.y, 
       'Not Important & Not Urgent', 
       this.vuetifyColors.info
     );
@@ -322,27 +333,28 @@ export class ChartVisualization {
     const chipGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     chipGroup.classList.add('vuetify-chip');
     
-    // Chip background
+    // Chip background with improved appearance
     const chipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    chipBg.setAttribute('x', x - 60);
-    chipBg.setAttribute('y', y - 12);
-    chipBg.setAttribute('width', '120');
-    chipBg.setAttribute('height', '24');
-    chipBg.setAttribute('rx', '12');
-    chipBg.setAttribute('ry', '12');
-    chipBg.setAttribute('fill', color);
-    chipBg.setAttribute('opacity', '0.1');
+    chipBg.setAttribute('x', x - 80); // Wider to accommodate longer text
+    chipBg.setAttribute('y', y - 14);
+    chipBg.setAttribute('width', '160'); // Wider rectangle
+    chipBg.setAttribute('height', '28'); // Slightly taller
+    chipBg.setAttribute('rx', '14');
+    chipBg.setAttribute('ry', '14');
+    chipBg.setAttribute('fill', 'white'); // White background
+    chipBg.setAttribute('opacity', '0.85'); // Semi-transparent
     chipBg.setAttribute('stroke', color);
-    chipBg.setAttribute('stroke-width', '1');
+    chipBg.setAttribute('stroke-width', '1.5'); // Slightly thicker border
+    chipBg.setAttribute('filter', 'url(#elevation-2)'); // Add shadow for better visibility
     chipGroup.appendChild(chipBg);
     
-    // Chip text
+    // Chip text with improved styling
     const chipText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     chipText.setAttribute('x', x);
-    chipText.setAttribute('y', y + 4);
+    chipText.setAttribute('y', y + 5); // Center text vertically
     chipText.setAttribute('text-anchor', 'middle');
     chipText.setAttribute('font-family', 'Roboto, sans-serif');
-    chipText.setAttribute('font-size', '10px');
+    chipText.setAttribute('font-size', '12px'); // Slightly larger text
     chipText.setAttribute('font-weight', '500');
     chipText.setAttribute('fill', color);
     chipText.textContent = label;
@@ -376,15 +388,26 @@ export class ChartVisualization {
     // Calculate quadrant stats (if Vue app exists, update there too)
     this.calculateQuadrantStats(parentTasks);
     
-    // Render each task as a dot
-    parentTasks.forEach(task => {
-      const position = this.calculateTaskPosition(task);
-      const dot = this.createTaskDot(task, position.x, position.y);
-      this.dotsGroup.appendChild(dot);
-      console.log(`Added dot for task ${task.id} at position ${position.x},${position.y}`);
+    // Group tasks that would overlap on the chart
+    const taskGroups = this.groupOverlappingTasks(parentTasks);
+    
+    // Render each group of tasks
+    taskGroups.forEach(group => {
+      if (group.length === 1) {
+        // Single task - render normally
+        const task = group[0];
+        const position = this.calculateTaskPosition(task);
+        const dot = this.createTaskDot(task, position.x, position.y);
+        this.dotsGroup.appendChild(dot);
+      } else {
+        // Multiple tasks in same position - create a cluster
+        const position = this.calculateTaskPosition(group[0]);
+        const cluster = this.createTaskCluster(group, position.x, position.y);
+        this.dotsGroup.appendChild(cluster);
+      }
     });
     
-    console.log(`Successfully added ${parentTasks.length} task dots to the chart`);
+    console.log(`Successfully rendered task dots on the chart`);
   }
   
   renderEmptyState() {
@@ -444,15 +467,44 @@ export class ChartVisualization {
     dot.setAttribute('class', 'task-dot');
     dot.setAttribute('data-task-id', task.id);
     dot.style.cursor = 'pointer';
-    dot.style.transition = 'all 0.2s ease';
     
     // Add shadow for elevation
     dot.setAttribute('filter', 'url(#elevation-2)');
     
-    // Add event listeners
+    // Add improved event listeners
     dot.addEventListener('click', () => this.focusOnTask(task.id));
-    dot.addEventListener('mouseenter', () => this.handleDotHover(dot, task));
-    dot.addEventListener('mouseleave', () => this.handleDotLeave(dot));
+    
+    // Use a flag to track hover state
+    let isHovering = false;
+    dot.addEventListener('mouseenter', () => {
+      isHovering = true;
+      
+      // Only apply transform if this dot is NOT selected
+      if (!dot.classList.contains('selected-dot')) {
+        dot.style.stroke = '#fff';
+        dot.style.strokeWidth = '2px';
+      }
+      
+      // Show tooltip after a small delay to prevent flickering
+      setTimeout(() => {
+        if (isHovering) {
+          const content = this.createTooltipContent(task);
+          this.showStableTooltip(content, dot, task);
+        }
+      }, 50);
+    });
+    
+    dot.addEventListener('mouseleave', () => {
+      isHovering = false;
+      
+      // Only reset styles if this dot is NOT selected
+      if (!dot.classList.contains('selected-dot')) {
+        dot.style.stroke = 'none';
+        dot.style.strokeWidth = '0px';
+      }
+      
+      this.hideTooltip();
+    });
     
     dotGroup.appendChild(dot);
     
@@ -487,27 +539,6 @@ export class ChartVisualization {
     }
     
     return dotGroup;
-  }
-  
-  handleDotHover(dot, task) {
-    // Enlarge dot on hover
-    dot.setAttribute('r', '15');
-    dot.setAttribute('stroke', '#fff');
-    dot.setAttribute('stroke-width', '2');
-    
-    // Show tooltip with task details
-    const content = this.createTooltipContent(task);
-    this.showTooltip(content, dot);
-  }
-  
-  handleDotLeave(dot) {
-    // Restore original size on mouse leave
-    dot.setAttribute('r', '12');
-    dot.setAttribute('stroke', 'none');
-    dot.setAttribute('stroke-width', '0');
-    
-    // Hide tooltip
-    this.hideTooltip();
   }
   
   createTooltipContent(task) {
@@ -566,7 +597,7 @@ export class ChartVisualization {
     `;
   }
   
-  showTooltip(content, element) {
+  showStableTooltip(content, element, task) {
     // Remove any existing tooltips
     this.hideTooltip();
     
@@ -579,24 +610,73 @@ export class ChartVisualization {
       this.tooltipElement.style.pointerEvents = 'none';
       this.tooltipElement.style.transition = 'opacity 0.2s ease';
       this.tooltipElement.style.opacity = '0';
+      this.tooltipElement.style.maxWidth = '300px';
       document.body.appendChild(this.tooltipElement);
     }
     
     // Update content
     this.tooltipElement.innerHTML = content;
     
-    // Get element position
+    // Get element position once and store it
     const rect = element.getBoundingClientRect();
+    const dotCenterX = rect.left + rect.width / 2;
+    const dotCenterY = rect.top + rect.height / 2;
     
-    // Position the tooltip
-    this.tooltipElement.style.left = `${rect.left + rect.width / 2}px`;
-    this.tooltipElement.style.top = `${rect.top - 10}px`;
+    // Determine fixed tooltip position with full calculations before showing tooltip
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Pre-show the tooltip but keep it invisible to measure its dimensions
+    this.tooltipElement.style.opacity = '0';
+    this.tooltipElement.style.left = `${dotCenterX}px`;
+    this.tooltipElement.style.top = `${dotCenterY}px`;
+    this.tooltipElement.style.visibility = 'visible';
     this.tooltipElement.style.transform = 'translate(-50%, -100%)';
     
+    // Measure the tooltip
+    const tooltipRect = this.tooltipElement.getBoundingClientRect();
+    const tooltipWidth = tooltipRect.width;
+    const tooltipHeight = tooltipRect.height;
+    
+    // Calculate available space in different directions
+    const spaceRight = viewportWidth - dotCenterX - tooltipWidth/2;
+    const spaceLeft = dotCenterX - tooltipWidth/2;
+    const spaceAbove = dotCenterY - tooltipHeight;
+    const spaceBelow = viewportHeight - dotCenterY - tooltipHeight;
+    
+    // Choose the best position with sufficient margins
+    let finalX, finalY, finalTransform;
+    
+    if (spaceAbove > 20) {
+      // Position above
+      finalX = dotCenterX;
+      finalY = rect.top - 15;
+      finalTransform = 'translate(-50%, -100%)';
+    } else if (spaceBelow > 20) {
+      // Position below
+      finalX = dotCenterX;
+      finalY = rect.bottom + 15;
+      finalTransform = 'translate(-50%, 0)';
+    } else if (spaceRight > 20) {
+      // Position right
+      finalX = rect.right + 15;
+      finalY = dotCenterY;
+      finalTransform = 'translate(0, -50%)';
+    } else {
+      // Position left
+      finalX = rect.left - 15;
+      finalY = dotCenterY;
+      finalTransform = 'translate(-100%, -50%)';
+    }
+    
+    // Set final position
+    this.tooltipElement.style.left = `${finalX}px`;
+    this.tooltipElement.style.top = `${finalY}px`;
+    this.tooltipElement.style.transform = finalTransform;
+    
     // Make tooltip visible
-    setTimeout(() => {
-      this.tooltipElement.style.opacity = '1';
-    }, 10);
+    this.tooltipElement.style.opacity = '1';
+    this.tooltipElement.style.visibility = 'visible';
   }
   
   hideTooltip() {
@@ -676,16 +756,8 @@ export class ChartVisualization {
     taskDot.setAttribute('r', '18'); // Make it bigger
     taskDot.setAttribute('stroke', '#ffffff');
     taskDot.setAttribute('stroke-width', '3');
-    
-    // Create a pulse animation
-    const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
-    animateEl.setAttribute('attributeName', 'r');
-    animateEl.setAttribute('from', '18');
-    animateEl.setAttribute('to', '22');
-    animateEl.setAttribute('dur', '1s');
-    animateEl.setAttribute('repeatCount', '3');
-    taskDot.appendChild(animateEl);
-    animateEl.beginElement();
+    // Explicitly remove any transform that might have been added on hover
+    taskDot.style.transform = '';
     
     // Also highlight in the task list
     const taskListItem = document.querySelector(`.task[data-task-id="${taskId}"]`);
@@ -735,5 +807,207 @@ export class ChartVisualization {
         this.renderChart(tasks);
       }
     }).catch(err => console.error('Error getting tasks for color update:', err));
+  }
+  
+  // Group tasks that would appear in the same position
+  groupOverlappingTasks(tasks) {
+    const groups = [];
+    const positionMap = new Map();
+    
+    tasks.forEach(task => {
+      const position = this.calculateTaskPosition(task);
+      const key = `${Math.round(position.x)},${Math.round(position.y)}`;
+      
+      if (!positionMap.has(key)) {
+        positionMap.set(key, []);
+      }
+      
+      positionMap.get(key).push(task);
+    });
+    
+    positionMap.forEach(tasksAtPosition => {
+      groups.push(tasksAtPosition);
+    });
+    
+    return groups;
+  }
+  
+  // Create a visual representation of multiple tasks at the same position
+  createTaskCluster(tasks, x, y) {
+    const clusterGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    clusterGroup.classList.add('task-cluster');
+    
+    // Create the main cluster dot
+    const mainDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    mainDot.setAttribute('cx', x);
+    mainDot.setAttribute('cy', y);
+    mainDot.setAttribute('r', '16'); // Slightly larger to show it's a cluster
+    mainDot.setAttribute('fill', this.getQuadrantColorForTask(tasks[0]));
+    mainDot.setAttribute('class', 'task-dot cluster-dot');
+    mainDot.setAttribute('data-task-count', tasks.length);
+    mainDot.style.cursor = 'pointer';
+    mainDot.style.transition = 'all 0.2s ease';
+    
+    // Add shadow for elevation
+    mainDot.setAttribute('filter', 'url(#elevation-2)');
+    
+    // Add event listeners for the cluster
+    mainDot.addEventListener('click', () => this.showClusterDetails(tasks, mainDot));
+    mainDot.addEventListener('mouseenter', () => this.handleClusterHover(mainDot, tasks));
+    mainDot.addEventListener('mouseleave', () => this.handleClusterLeave(mainDot));
+    
+    clusterGroup.appendChild(mainDot);
+    
+    // Add count indicator
+    const countLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    countLabel.setAttribute('x', x);
+    countLabel.setAttribute('y', y + 4);
+    countLabel.setAttribute('text-anchor', 'middle');
+    countLabel.setAttribute('font-family', 'Roboto, sans-serif');
+    countLabel.setAttribute('font-size', '10px');
+    countLabel.setAttribute('font-weight', 'bold');
+    countLabel.setAttribute('fill', 'white');
+    countLabel.textContent = tasks.length;
+    clusterGroup.appendChild(countLabel);
+    
+    return clusterGroup;
+  }
+  
+  // Handle hover on a task cluster
+  handleClusterHover(clusterDot, tasks) {
+    // Enlarge dot on hover
+    clusterDot.setAttribute('r', '18');
+    clusterDot.setAttribute('stroke', '#fff');
+    clusterDot.setAttribute('stroke-width', '2');
+    
+    // Create multi-task tooltip content
+    const content = this.createClusterTooltipContent(tasks);
+    this.showStableTooltip(content, clusterDot, tasks);
+  }
+  
+  // Handle mouse leave on a cluster
+  handleClusterLeave(clusterDot) {
+    // Restore original size
+    clusterDot.setAttribute('r', '16');
+    clusterDot.setAttribute('stroke', 'none');
+    clusterDot.setAttribute('stroke-width', '0');
+    
+    // Hide tooltip
+    this.hideTooltip();
+  }
+  
+  // Create tooltip content for a cluster
+  createClusterTooltipContent(tasks) {
+    return `
+      <div style="font-family: Roboto, sans-serif; width: 280px; border-radius: 4px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.16);">
+        <div style="background-color: ${this.getQuadrantColorForTask(tasks[0])}; color: white; padding: 12px 16px;">
+          <div style="font-weight: 500; font-size: 16px;">${tasks.length} Tasks at this position</div>
+        </div>
+        <div style="background: white; padding: 12px 16px; max-height: 300px; overflow-y: auto;">
+          ${tasks.map((task, index) => `
+            <div style="margin-bottom: ${index < tasks.length - 1 ? '12px' : '0'}; ${index > 0 ? 'padding-top: 8px; border-top: 1px solid #eee;' : ''}">
+              <div style="font-weight: 500; color: ${this.getQuadrantColorForTask(task)};">
+                ${index + 1}. ${task.name}
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px; color: #666;">
+                <div>Importance: <b>${task.importance}/10</b></div>
+                <div>Urgency: <b>${task.urgency}/10</b></div>
+              </div>
+            </div>
+          `).join('')}
+          <div style="margin-top: 12px; font-size: 12px; color: #757575; text-align: center;">
+            Click to expand and select a task
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Show details of a cluster when clicked
+  showClusterDetails(tasks, clusterDot) {
+    // Remove any current expansions
+    const existingExpansions = document.querySelectorAll('.cluster-expansion');
+    existingExpansions.forEach(el => el.parentNode.removeChild(el));
+    
+    // Create a group for the expansion
+    const expansionGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    expansionGroup.classList.add('cluster-expansion');
+    
+    // Get position of the cluster dot
+    const rect = clusterDot.getBoundingClientRect();
+    const svgRect = this.chartGroup.getBoundingClientRect();
+    const dotX = parseFloat(clusterDot.getAttribute('cx'));
+    const dotY = parseFloat(clusterDot.getAttribute('cy'));
+    
+    // Create mini-dots in a circle around the main dot
+    const radius = 40; // Distance from center
+    tasks.forEach((task, index) => {
+      const angle = (2 * Math.PI * index) / tasks.length;
+      const x = dotX + radius * Math.cos(angle);
+      const y = dotY + radius * Math.sin(angle);
+      
+      // Create connecting line
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', dotX);
+      line.setAttribute('y1', dotY);
+      line.setAttribute('x2', x);
+      line.setAttribute('y2', y);
+      line.setAttribute('stroke', this.getQuadrantColorForTask(task));
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-dasharray', '2,2');
+      expansionGroup.appendChild(line);
+      
+      // Create mini dot with stable appearance (no hover effects)
+      const miniDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      miniDot.setAttribute('cx', x);
+      miniDot.setAttribute('cy', y);
+      miniDot.setAttribute('r', '10');
+      miniDot.setAttribute('fill', this.getQuadrantColorForTask(task));
+      miniDot.setAttribute('class', 'task-dot mini-dot');
+      miniDot.setAttribute('data-task-id', task.id);
+      miniDot.style.cursor = 'pointer';
+      
+      // Only add click event - remove hover effects completely
+      miniDot.addEventListener('click', () => this.focusOnTask(task.id));
+      
+      expansionGroup.appendChild(miniDot);
+      
+      // Add task name
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', x);
+      text.setAttribute('y', y - 15);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('font-family', 'Roboto, sans-serif');
+      text.setAttribute('font-size', '9px');
+      text.setAttribute('fill', this.getQuadrantColorForTask(task));
+      text.textContent = task.name.length > 8 ? task.name.substring(0, 7) + '...' : task.name;
+      expansionGroup.appendChild(text);
+    });
+    
+    // Add to the chart
+    this.dotsGroup.appendChild(expansionGroup);
+    
+    // Add a close button
+    const closeButton = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    closeButton.setAttribute('cx', dotX);
+    closeButton.setAttribute('cy', dotY - radius);
+    closeButton.setAttribute('r', '10');
+    closeButton.setAttribute('fill', '#f44336');
+    closeButton.style.cursor = 'pointer';
+    closeButton.addEventListener('click', () => {
+      expansionGroup.parentNode.removeChild(expansionGroup);
+    });
+    expansionGroup.appendChild(closeButton);
+    
+    // Add X to close button
+    const closeX = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    closeX.setAttribute('x', dotX);
+    closeX.setAttribute('y', dotY - radius + 3);
+    closeX.setAttribute('text-anchor', 'middle');
+    closeX.setAttribute('font-family', 'Roboto, sans-serif');
+    closeX.setAttribute('font-size', '12px');
+    closeX.setAttribute('fill', 'white');
+    closeX.textContent = '×';
+    expansionGroup.appendChild(closeX);
   }
 } 

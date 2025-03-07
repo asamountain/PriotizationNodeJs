@@ -1,0 +1,93 @@
+/* Task highlighting styles */
+.highlighted-task {
+  animation: highlight-pulse 1.5s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(25, 118, 210, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.selected-dot {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
+}
+
+/* Tooltip appearance and positioning */
+.chart-tooltip {
+  font-family: 'Roboto', sans-serif;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+  max-width: 300px;
+  word-wrap: break-word;
+  overflow: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.chart-tooltip-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}
+
+.chart-tooltip-body {
+  padding: 10px 14px;
+}
+
+/* Task dot styles */
+.task-dot:hover {
+  stroke: white;
+  stroke-width: 2px;
+  transition: all 0.2s ease;
+}
+
+.selected-dot {
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+}
+
+/* Prevent hover effects on already selected dots */
+.task-dot.selected-dot:hover {
+  transform: none !important;
+  /* Keep the existing stroke but don't change it on hover */
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+/* Chart container overflow handling */
+#taskChart {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* Cluster and line-connected tooltips */
+.task-dot.cluster-dot {
+  opacity: 0.9;
+  transition: all 0.3s ease;
+}
+
+.task-dot.mini-dot {
+  opacity: 0.85;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.task-dot.mini-dot:hover {
+  opacity: 0.85;
+  transform: none;
+}
+
+.cluster-expansion {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Ensure proper overflow behavior */
+.v-card-text {
+  overflow: visible !important;
+} 
