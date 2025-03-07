@@ -91,7 +91,7 @@ h1 {
     margin-bottom: 2.5rem;
     background: var(--background-primary);
     padding: 1.8rem;
-    border-radius: 8px;
+  border-radius: 8px;
     box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 2px 10px 0 rgba(0, 0, 0, 0.08);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -120,7 +120,7 @@ h1 {
 }
 
 .form-row {
-    display: flex;
+  display: flex;
     gap: 1.5rem;
     margin-bottom: 1.8rem;
 }
@@ -141,7 +141,7 @@ label {
 
 /* Material Design Input Fields */
 input[type="text"] {
-    width: 100%;
+  width: 100%;
     padding: 0.8rem 0.5rem;
     border: none;
     border-bottom: 2px solid rgba(0, 0, 0, 0.2);
@@ -188,7 +188,7 @@ input[type="text"]:focus::placeholder {
 /* Material Design Sliders */
 input[type="range"] {
     -webkit-appearance: none;
-    width: 100%;
+  width: 100%;
     height: 4px;
     background: linear-gradient(to right, var(--primary-color-light), var(--primary-color));
     outline: none;
@@ -198,7 +198,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    appearance: none;
+  appearance: none;
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -474,6 +474,12 @@ input[type="range"]::-ms-thumb {
     font-size: 0.85rem;
     color: var(--text-secondary);
     margin-left: 0.5rem;
+}
+
+.task-created {
+    font-style: italic;
+    font-size: 0.75rem;
+    opacity: 0.8;
 }
 
 /* Task link styles */

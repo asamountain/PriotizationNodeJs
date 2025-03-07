@@ -299,10 +299,24 @@ export class TaskManager {
     this.chartWidth = chartWidth;
     this.chartHeight = chartHeight;
     
-    // If we already have tasks, render them immediately
+    // If we already have tasks data, render the chart immediately
     if (this.tasks && this.tasks.length > 0) {
-      this.renderChart(this.tasks);
+      console.log(`Chart initialized, rendering ${this.tasks.length} tasks immediately`);
+      // Use a small setTimeout to ensure DOM is fully updated
+      setTimeout(() => {
+        this.renderChart(this.tasks);
+      }, 0);
+    } else {
+      console.log('Chart initialized, but no tasks to render yet');
     }
+    
+    // Fire a custom event to signal chart is ready
+    const chartReadyEvent = new CustomEvent('chartInitialized', {
+      detail: { chartManager: this }
+    });
+    window.dispatchEvent(chartReadyEvent);
+    
+    return this;
   }
   
   initializeCompletionChart() {
@@ -547,6 +561,18 @@ export class TaskManager {
     const mainTasks = tasksToRender.filter(task => !task.done && !task.parent_id);
     console.log(`Rendering ${mainTasks.length} tasks on chart`);
     
+    // Check if we've already rendered these exact tasks
+    // This helps prevent unnecessary re-renders
+    if (this._lastRenderedTaskIds && 
+        mainTasks.length === this._lastRenderedTaskIds.length &&
+        mainTasks.every(task => this._lastRenderedTaskIds.includes(task.id))) {
+      console.log('Skipping chart render: same tasks already rendered');
+      return;
+    }
+    
+    // Store the IDs of the tasks we're about to render
+    this._lastRenderedTaskIds = mainTasks.map(task => task.id);
+    
     // Clear existing dots
     if (this.dotsGroup) {
       this.dotsGroup.innerHTML = '';
@@ -597,11 +623,23 @@ export class TaskManager {
         // Add to the dots group
         this.dotsGroup.appendChild(dot);
     });
+    
+    // Store the rendered data
+    this._lastData = tasksToRender;
+    
+    // Fire an event indicating chart was rendered
+    const chartRenderedEvent = new CustomEvent('chartRendered', {
+      detail: { 
+        taskCount: mainTasks.length,
+        manager: this
+      }
+    });
+    window.dispatchEvent(chartRenderedEvent);
   }
   
   getTaskDotSize(task) {
     // Base size - increased for better visibility in the larger chart
-    let size = 8; // Increased from 6
+    let size = 3; // Increased from 6
     
     // Increase size based on task importance - more pronounced scaling
     size += task.importance * 0.6; // Increased factor from 0.5
@@ -1011,28 +1049,53 @@ export class TaskManager {
     
     // Request initial data if socket is connected
     if (this.socket && this.socket.connected) {
+      console.log('Socket connected, requesting initial data');
       this.socket.emit('requestInitialData');
     } else if (this.socket) {
       // If not connected, wait for connection and then request data
+      console.log('Socket not connected, waiting for connection');
       this.socket.on('connect', () => {
+        console.log('Socket now connected, requesting initial data');
         this.socket.emit('requestInitialData');
       });
     }
     
+    // Setup chart initialization
+    let chartInitialized = false;
+    
+    // Add listener for custom chart initialization event
+    window.addEventListener('chartInitialized', () => {
+      chartInitialized = true;
+      console.log('Chart initialization event received');
+      
+      // Render tasks if we have them
+      if (this.tasks && this.tasks.length > 0) {
+        console.log(`Rendering ${this.tasks.length} tasks after chart init event`);
+        this.renderChart(this.tasks);
+      }
+    }, { once: true });
+    
     // Initialize chart immediately
     this.initializeChart();
     
-    // If we already have tasks data, render the chart immediately
-    if (this.tasks && this.tasks.length > 0) {
-      this.renderChart(this.tasks);
-    }
-    
-    // Add a small delay to ensure chart renders even if socket data is slow
+    // Setup fallback rendering in case the event doesn't fire
     setTimeout(() => {
-      if (this.tasks && this.tasks.length > 0) {
+      if (!chartInitialized && this.tasks && this.tasks.length > 0) {
+        console.log(`Chart event didn't fire, forcing render of ${this.tasks.length} tasks`);
         this.renderChart(this.tasks);
       }
     }, 500);
+    
+    // Add multiple delayed render attempts to ensure chart shows tasks
+    // Different timeouts to catch various possible initialization timings
+    [200, 800, 1500, 3000].forEach(delay => {
+      setTimeout(() => {
+        if (this.tasks && this.tasks.length > 0) {
+          console.log(`Rendering ${this.tasks.length} tasks after ${delay}ms delay`);
+          this.renderChart(this.tasks);
+        }
+      }, delay);
+    });
     
     // Emit an event to let consumers know we're initialized
     this.emitUpdate();

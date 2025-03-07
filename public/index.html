@@ -115,6 +115,7 @@
                                                 <div class="task-name-container">
                                                     <span class="task-name">{{ task.name }}</span>
                                                     <span class="task-date" v-if="task.due_date">Due: {{ formatDate(task.due_date) }}</span>
+                                                    <span class="task-date task-created" v-if="task.created_at">Created: {{ formatDate(task.created_at) }}</span>
                                                     
                                                     <!-- Display task link if present -->
                                                     <a v-if="task.link" 
@@ -243,6 +244,7 @@
                                             <div class="task-name-container">
                                                 <span class="task-name">{{ task.name }}</span>
                                                 <span class="task-date" v-if="task.completed_at">Completed: {{ formatDate(task.completed_at) }}</span>
+                                                <span class="task-date task-created" v-if="task.created_at">Created: {{ formatDate(task.created_at) }}</span>
                                                 
                                                 <!-- Display task link if present -->
                                                 <a v-if="task.link" 

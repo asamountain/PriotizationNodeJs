@@ -25,25 +25,25 @@ class Database {
   }
 
   async createTables() {
-    const migrations = [
-      // Create tasks table if it doesn't exist
-      `CREATE TABLE IF NOT EXISTS tasks (
+    return new Promise((resolve, reject) => {
+      // Define table creation and migrations in a single transaction
+      const migrations = [
+        `CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
-          importance REAL CHECK(importance >= 0 AND importance <= 10),
-          urgency REAL CHECK(urgency >= 0 AND urgency <= 10),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          done INTEGER DEFAULT 0,
-          parent_id INTEGER DEFAULT NULL,
-          FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE CASCADE
-      )`,
-      // Add done column if it doesn't exist
-      `ALTER TABLE tasks ADD COLUMN done INTEGER DEFAULT 0`,
-      // Add parent_id column if it doesn't exist
-      `ALTER TABLE tasks ADD COLUMN parent_id INTEGER DEFAULT NULL REFERENCES tasks(id) ON DELETE CASCADE`
-    ];
-
-    return new Promise((resolve, reject) => {
+          importance INTEGER DEFAULT 5,
+          urgency INTEGER DEFAULT 5,
+          done BOOLEAN DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          parent_id INTEGER NULL,
+          FOREIGN KEY (parent_id) REFERENCES tasks(id)
+        )`,
+        // Add migrations for new columns
+        `ALTER TABLE tasks ADD COLUMN due_date TEXT NULL`,
+        `ALTER TABLE tasks ADD COLUMN link TEXT NULL`,
+        `ALTER TABLE tasks ADD COLUMN completed_at TEXT NULL`
+      ];
+      
       this.db.serialize(() => {
         migrations.forEach(sql => {
           this.db.run(sql, (err) => {
@@ -129,21 +129,46 @@ class Database {
   }
 
   async toggleTaskDone(id) {
+    console.log('Database.toggleTaskDone called for task ID:', id);
+    
     return new Promise((resolve, reject) => {
-      this.db.run(
-        "UPDATE tasks SET done = NOT done WHERE id = ?",
-        [id],
-        (err) => {
-          if (err) {
-            console.error("Error toggling task done status:", err);
-            reject(err);
+      // First, get the current task to determine its name for notification
+      this.db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, task) => {
+        if (err) {
+          console.error("Error getting task for toggle:", err);
+          reject(err);
+          return;
+        }
+        
+        if (!task) {
+          const notFoundError = new Error(`Task with ID ${id} not found`);
+          console.error(notFoundError);
+          reject(notFoundError);
+          return;
+        }
+        
+        // Now that we have the task, update its done status
+        // Also update completion_time for audit trail
+        const now = new Date().toISOString();
+        const updateQuery = task.done 
+          ? "UPDATE tasks SET done = 0, completed_at = NULL WHERE id = ?" 
+          : "UPDATE tasks SET done = 1, completed_at = ? WHERE id = ?";
+        
+        const params = task.done ? [id] : [now, id];
+        
+        this.db.run(updateQuery, params, (updateErr) => {
+          if (updateErr) {
+            console.error("Error toggling task done status:", updateErr);
+            reject(updateErr);
             return;
           }
-          console.log("Task done status toggled:", id);
-          resolve();
-        }
-      )
-    })
+          
+          // Task was successfully toggled
+          console.log(`Task ${task.name} ${task.done ? 'reopened' : 'completed'}`);
+          resolve(task);
+        });
+      });
+    });
   }
 
   // Add a subtask to a parent task

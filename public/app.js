@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       deleteTask(taskId) {
         if (confirm('Are you sure you want to delete this task?')) {
-          taskManager.deleteTask(taskId);
+  taskManager.deleteTask(taskId);
         }
       },
       
