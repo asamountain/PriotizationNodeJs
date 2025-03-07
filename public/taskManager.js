@@ -106,7 +106,7 @@ export class TaskManager {
     
     // Force a re-render of the chart
     if (this.tasks && Array.isArray(this.tasks)) {
-      this.renderChart();
+      this.renderChart(this.tasks);
     }
   }
 
@@ -160,161 +160,93 @@ export class TaskManager {
   }
 
   initializeChart() {
-    console.log('TaskManager.initializeChart called');
+    console.log('--- NEW SIMPLE CHART INITIALIZATION ---');
     
-    // Select chart container
-    const chartContainer = document.querySelector('#taskChart');
-    if (!chartContainer) {
-      console.error('Chart container #taskChart not found');
+    // Get the container
+    const container = document.getElementById('taskChart');
+    if (!container) {
+      console.error('No chart container found!');
       return;
     }
     
-    // Clear any existing chart
-    chartContainer.innerHTML = '';
+    // Clear the container
+    container.innerHTML = '';
     
-    // Get container dimensions for responsive sizing
-    const containerWidth = chartContainer.clientWidth || 600;
-    const containerHeight = chartContainer.clientHeight || 450;
-    
-    // Create SVG element with responsive viewBox that better utilizes the space
+    // Create a simple SVG directly with no complexity
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
-    svg.setAttribute('viewBox', '0 0 860 660'); // Increased from 800x600 for better fit
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    svg.style.overflow = 'visible';
-    chartContainer.appendChild(svg);
+    svg.setAttribute('viewBox', '0 0 800 600');
+    svg.style.display = 'block';
+    svg.style.position = 'absolute';
+    svg.style.top = '0';
+    svg.style.left = '0';
+    svg.style.zIndex = '10';
     
-    // Create chart group with proper margins - decreased margins to use more space
-    this.chartGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    this.chartGroup.setAttribute('transform', 'translate(60, 45)'); // Adjusted for better positioning
-    svg.appendChild(this.chartGroup);
+    // Create a container group for all the dots
+    const dotsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    dotsGroup.classList.add('task-dots');
+    dotsGroup.setAttribute('transform', 'translate(50, 50)');
+    svg.appendChild(dotsGroup);
     
-    // Define chart dimensions - increased for more space
-    const chartWidth = 740; // Increased from 660 for better use of space
-    const chartHeight = 520; // Increased from 480 for better proportions
+    // Add a visible border to the chart area
+    const border = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    border.setAttribute('x', '50');
+    border.setAttribute('y', '50');
+    border.setAttribute('width', '700');
+    border.setAttribute('height', '500');
+    border.setAttribute('fill', 'none');
+    border.setAttribute('stroke', 'red');
+    border.setAttribute('stroke-width', '3');
+    svg.appendChild(border);
     
-    // Add chart background for better visual definition
-    const chartBackground = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    chartBackground.setAttribute('x', 0);
-    chartBackground.setAttribute('y', 0);
-    chartBackground.setAttribute('width', chartWidth);
-    chartBackground.setAttribute('height', chartHeight);
-    chartBackground.setAttribute('rx', '12'); // More rounded corners
-    chartBackground.setAttribute('ry', '12');
-    chartBackground.setAttribute('fill', this.isDarkTheme ? 'rgba(40, 44, 52, 0.8)' : 'rgba(245, 245, 245, 0.8)');
-    chartBackground.setAttribute('stroke', this.isDarkTheme ? 'rgba(100, 100, 100, 0.3)' : 'rgba(200, 200, 200, 0.8)');
-    chartBackground.setAttribute('stroke-width', '1');
-    this.chartGroup.appendChild(chartBackground);
+    // Create coordinate axes
+    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    xAxis.setAttribute('x1', '50');
+    xAxis.setAttribute('y1', '300');
+    xAxis.setAttribute('x2', '750');
+    xAxis.setAttribute('y2', '300');
+    xAxis.setAttribute('stroke', 'black');
+    xAxis.setAttribute('stroke-width', '2');
+    svg.appendChild(xAxis);
     
-    // Calculate midpoints for quadrant division
-    const midX = chartWidth / 2;
-    const midY = chartHeight / 2;
+    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    yAxis.setAttribute('x1', '400');
+    yAxis.setAttribute('y1', '50');
+    yAxis.setAttribute('x2', '400');
+    yAxis.setAttribute('y2', '550');
+    yAxis.setAttribute('stroke', 'black');
+    yAxis.setAttribute('stroke-width', '2');
+    svg.appendChild(yAxis);
     
-    // Add the main quadrant lines with improved styling
-    // Horizontal quadrant line
-    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    hLine.setAttribute('x1', 0);
-    hLine.setAttribute('y1', midY);
-    hLine.setAttribute('x2', chartWidth);
-    hLine.setAttribute('y2', midY);
-    hLine.setAttribute('stroke', this.isDarkTheme ? 'rgba(180, 180, 180, 0.4)' : 'rgba(120, 120, 120, 0.4)');
-    hLine.setAttribute('stroke-width', '2');
-    hLine.setAttribute('stroke-dasharray', '5,3');
-    this.chartGroup.appendChild(hLine);
+    // Add a static test dot that will definitely be visible
+    const testDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    testDot.setAttribute('cx', '400');
+    testDot.setAttribute('cy', '300');
+    testDot.setAttribute('r', '20');
+    testDot.setAttribute('fill', 'purple');
+    testDot.setAttribute('stroke', 'black');
+    testDot.setAttribute('stroke-width', '2');
+    dotsGroup.appendChild(testDot);
     
-    // Vertical quadrant line
-    const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    vLine.setAttribute('x1', midX);
-    vLine.setAttribute('y1', 0);
-    vLine.setAttribute('x2', midX);
-    vLine.setAttribute('y2', chartHeight);
-    vLine.setAttribute('stroke', this.isDarkTheme ? 'rgba(180, 180, 180, 0.4)' : 'rgba(120, 120, 120, 0.4)');
-    vLine.setAttribute('stroke-width', '2');
-    vLine.setAttribute('stroke-dasharray', '5,3');
-    this.chartGroup.appendChild(vLine);
+    // Store chart dimensions
+    this.chartWidth = 700;
+    this.chartHeight = 500;
     
-    // Add axis labels with improved styling and positioning
-    // X-axis (Urgency)
-    const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    xAxisLabel.setAttribute('x', chartWidth / 2);
-    xAxisLabel.setAttribute('y', chartHeight + 30);
-    xAxisLabel.setAttribute('text-anchor', 'middle');
-    xAxisLabel.setAttribute('fill', this.isDarkTheme ? '#ccc' : '#444');
-    xAxisLabel.setAttribute('font-family', 'Roboto, Arial, sans-serif');
-    xAxisLabel.setAttribute('font-size', '14px');
-    xAxisLabel.setAttribute('font-weight', '500');
-    xAxisLabel.textContent = 'URGENCY';
-    this.chartGroup.appendChild(xAxisLabel);
+    // Store the SVG and dots group for later use
+    this.chartGroup = dotsGroup;
+    this.dotsGroup = dotsGroup;
+    container.appendChild(svg);
     
-    // Y-axis (Importance)
-    const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    yAxisLabel.setAttribute('transform', `translate(-35, ${chartHeight / 2}) rotate(-90)`);
-    yAxisLabel.setAttribute('text-anchor', 'middle');
-    yAxisLabel.setAttribute('fill', this.isDarkTheme ? '#ccc' : '#444');
-    yAxisLabel.setAttribute('font-family', 'Roboto, Arial, sans-serif');
-    yAxisLabel.setAttribute('font-size', '14px');
-    yAxisLabel.setAttribute('font-weight', '500');
-    yAxisLabel.textContent = 'IMPORTANCE';
-    this.chartGroup.appendChild(yAxisLabel);
+    console.log('Simple chart initialized with test dot');
     
-    // Add grid lines
-    for (let i = 1; i < 10; i++) {
-      // Vertical grid lines
-      if (i % 2 === 0 && i !== 5) {
-        const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        gridLine.setAttribute('x1', (chartWidth / 10) * i);
-        gridLine.setAttribute('y1', 0);
-        gridLine.setAttribute('x2', (chartWidth / 10) * i);
-        gridLine.setAttribute('y2', chartHeight);
-        gridLine.setAttribute('stroke', this.isDarkTheme ? 'rgba(100, 100, 100, 0.1)' : 'rgba(200, 200, 200, 0.5)');
-        gridLine.setAttribute('stroke-width', '1');
-        this.chartGroup.appendChild(gridLine);
-      }
-      
-      // Horizontal grid lines
-      if (i % 2 === 0 && i !== 5) {
-        const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        gridLine.setAttribute('x1', 0);
-        gridLine.setAttribute('y1', (chartHeight / 10) * i);
-        gridLine.setAttribute('x2', chartWidth);
-        gridLine.setAttribute('y2', (chartHeight / 10) * i);
-        gridLine.setAttribute('stroke', this.isDarkTheme ? 'rgba(100, 100, 100, 0.1)' : 'rgba(200, 200, 200, 0.5)');
-        gridLine.setAttribute('stroke-width', '1');
-        this.chartGroup.appendChild(gridLine);
-      }
-    }
-    
-    // Create a group specifically for task dots
-    this.dotsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    this.dotsGroup.classList.add('task-dots');
-    this.chartGroup.appendChild(this.dotsGroup);
-    
-    // Create a group for annotations that will always be visible
-    this.annotationsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    this.annotationsGroup.classList.add('task-annotations');
-    this.chartGroup.appendChild(this.annotationsGroup);
-    
-    // Store chart dimensions for later use
-    this.chartWidth = chartWidth;
-    this.chartHeight = chartHeight;
-    
-    // If we already have tasks data, render the chart immediately
-    if (this.tasks && this.tasks.length > 0) {
-      console.log(`Chart initialized, rendering ${this.tasks.length} tasks immediately`);
-      // Use a small setTimeout to ensure DOM is fully updated
-      setTimeout(() => {
+    // If we have tasks, render them after a short delay
+    setTimeout(() => {
+      if (this.tasks && this.tasks.length > 0) {
+        console.log(`Rendering ${this.tasks.length} tasks after delay`);
         this.renderChart(this.tasks);
-      }, 0);
-    } else {
-      console.log('Chart initialized, but no tasks to render yet');
-    }
-    
-    // Fire a custom event to signal chart is ready
-    const chartReadyEvent = new CustomEvent('chartInitialized', {
-      detail: { chartManager: this }
-    });
-    window.dispatchEvent(chartReadyEvent);
+      }
+    }, 500);
     
     return this;
   }
@@ -544,133 +476,120 @@ export class TaskManager {
   }
 
   renderChart(tasks) {
-    if (!this.chartGroup) {
-      console.error('Cannot render chart: chart group not available');
+    console.log('--- SIMPLIFIED RENDER CHART ---');
+    
+    // Verify we have the dots group
+    if (!this.dotsGroup) {
+      console.error('No dots group available for rendering!');
       return;
     }
     
-    // Use provided tasks or fall back to the internal tasks array
+    // Use provided tasks or fall back to internal array
     const tasksToRender = tasks || this.tasks;
     
+    // Make sure we have tasks
     if (!tasksToRender || !Array.isArray(tasksToRender)) {
-      console.error('Cannot render chart: no tasks available');
+      console.error('No tasks available to render');
       return;
     }
     
-    // Filter for main tasks (not done and no parent)
-    const mainTasks = tasksToRender.filter(task => !task.done && !task.parent_id);
-    console.log(`Rendering ${mainTasks.length} tasks on chart`);
+    // Filter for active parent tasks
+    const activeTasks = tasksToRender.filter(task => !task.done && !task.parent_id);
+    console.log(`Found ${activeTasks.length} active tasks to render`);
     
-    // Check if we've already rendered these exact tasks
-    // This helps prevent unnecessary re-renders
-    if (this._lastRenderedTaskIds && 
-        mainTasks.length === this._lastRenderedTaskIds.length &&
-        mainTasks.every(task => this._lastRenderedTaskIds.includes(task.id))) {
-      console.log('Skipping chart render: same tasks already rendered');
-      return;
-    }
+    // Clear any existing dots
+    this.dotsGroup.innerHTML = '';
     
-    // Store the IDs of the tasks we're about to render
-    this._lastRenderedTaskIds = mainTasks.map(task => task.id);
+    // Make sure our purple test dot is always visible
+    const testDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    testDot.setAttribute('cx', '350');
+    testDot.setAttribute('cy', '250');
+    testDot.setAttribute('r', '20');
+    testDot.setAttribute('fill', 'purple');
+    testDot.setAttribute('stroke', 'black');
+    testDot.setAttribute('stroke-width', '2');
+    this.dotsGroup.appendChild(testDot);
     
-    // Clear existing dots
-    if (this.dotsGroup) {
-      this.dotsGroup.innerHTML = '';
-    } else {
-      // Create dots group if it doesn't exist
-      this.dotsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      this.dotsGroup.classList.add('task-dots');
-      this.chartGroup.appendChild(this.dotsGroup);
-    }
-    
-    // Remove any existing annotations group
-    if (this.annotationsGroup) {
-      this.annotationsGroup.remove();
-      this.annotationsGroup = null;
-      this.taskAnnotations = {};
-    }
-    
-    // Track positions of each task dot for overlap detection
-    const occupiedPositions = {};
-
-    mainTasks.forEach(task => {
-        const position = this.calculateTaskPosition(task);
-        const dotSize = this.getTaskDotSize(task);
-        
-        // Create adjusted position object to handle overlaps
-        let adjustedX = position.x;
-        let adjustedY = position.y;
-        
-        // Generate a position key for overlap detection
-        const posKey = `${Math.floor(position.x)},${Math.floor(position.y)}`;
-        
-        // Check for overlap and adjust position if necessary
-        if (occupiedPositions[posKey]) {
-            // Add a small random offset to both x and y coordinates
-            adjustedX += (Math.random() * 10) - 5; // Random offset between -5 and 5
-            adjustedY += (Math.random() * 10) - 5;
-        }
-        
-        // Mark this position as occupied
-        occupiedPositions[posKey] = true;
-        
-        // Create and position the dot with the adjusted coordinates
-        const dot = this.createTaskDot(task, adjustedX, adjustedY, dotSize);
-        
-        // Add interaction behaviors
-        this.addDotInteractions(dot, task);
-        
-        // Add to the dots group
-        this.dotsGroup.appendChild(dot);
-    });
-    
-    // Store the rendered data
-    this._lastData = tasksToRender;
-    
-    // Fire an event indicating chart was rendered
-    const chartRenderedEvent = new CustomEvent('chartRendered', {
-      detail: { 
-        taskCount: mainTasks.length,
-        manager: this
+    // Add task dots
+    activeTasks.forEach((task, index) => {
+      // Use index for positioning if importance/urgency is not valid
+      const importance = typeof task.importance === 'number' ? task.importance : 5;
+      const urgency = typeof task.urgency === 'number' ? task.urgency : 5;
+      
+      // Calculate x, y position (moved from 0-10 scale to pixels)
+      // x = 0 (left) to 700 (right) based on urgency (0-10)
+      // y = 0 (top) to 500 (bottom) based on importance (10-0)
+      const x = 50 + (urgency * 70); // 0-10 scale mapped to 0-700px
+      const y = 500 - (importance * 50); // 10-0 scale mapped to 0-500px
+      
+      // Create dot
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', x);
+      dot.setAttribute('cy', y);
+      dot.setAttribute('r', 15); // Large dot size
+      
+      // Color based on quadrant
+      let fillColor;
+      if (importance > 5 && urgency > 5) {
+        fillColor = '#ff5252'; // Q1: red
+      } else if (importance > 5 && urgency <= 5) {
+        fillColor = '#4caf50'; // Q2: green
+      } else if (importance <= 5 && urgency > 5) {
+        fillColor = '#ff9800'; // Q3: orange
+      } else {
+        fillColor = '#2196f3'; // Q4: blue
       }
+      
+      // Set attributes
+      dot.setAttribute('fill', fillColor);
+      dot.setAttribute('stroke', 'black');
+      dot.setAttribute('stroke-width', '2');
+      dot.setAttribute('style', `fill: ${fillColor}; stroke: black; opacity: 1; visibility: visible;`);
+      dot.setAttribute('data-task-id', task.id);
+      dot.classList.add('task-dot');
+      
+      // Add a text label
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', x);
+      label.setAttribute('y', y - 20);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('fill', 'black');
+      label.setAttribute('font-size', '12px');
+      label.setAttribute('font-weight', 'bold');
+      label.textContent = task.name.substring(0, 15) + (task.name.length > 15 ? '...' : '');
+      
+      // Add to dots group
+      this.dotsGroup.appendChild(dot);
+      this.dotsGroup.appendChild(label);
+      
+      console.log(`Added dot for task ${task.id} at position ${x},${y}`);
     });
-    window.dispatchEvent(chartRenderedEvent);
+    
+    console.log(`Successfully added ${activeTasks.length} task dots to the chart`);
   }
   
   getTaskDotSize(task) {
-    // Base size - increased for better visibility in the larger chart
-    let size = 3; // Increased from 6
-    
-    // Increase size based on task importance - more pronounced scaling
-    size += task.importance * 0.6; // Increased factor from 0.5
-    
-    // Increase if it has subtasks - more pronounced scaling
-    const subtaskCount = this.tasks.filter(t => t.parent_id === task.id).length;
-    if (subtaskCount > 0) {
-      size += Math.min(5, subtaskCount * 1.2); // Increased scaling factor
-    }
-    
-    // Ensure minimum size for better visibility
-    return Math.max(size, 10); // Set minimum size to 10
+    // Make dots bigger for better visibility
+    // We'll use a larger size (8) for debugging, but you can change back to 3 later
+    return 8;
   }
   
   getQuadrantColorForTask(task) {
-    // Determine quadrant based on importance and urgency
+    // Get quadrant based on importance and urgency
+    // Use hardcoded colors instead of CSS variables for reliability
     const isImportant = task.importance > 5;
     const isUrgent = task.urgency > 5;
     
-    let color;
+    // Return hardcoded hex colors instead of CSS variables
     if (isImportant && isUrgent) {
-      color = 'var(--q1-color, #ff5252)'; // Q1: Important & Urgent
+      return '#ff5252'; // Q1: Important & Urgent (red)
     } else if (isImportant && !isUrgent) {
-      color = 'var(--q2-color, #4caf50)'; // Q2: Important, Not Urgent
+      return '#4caf50'; // Q2: Important & Not Urgent (green)
     } else if (!isImportant && isUrgent) {
-      color = 'var(--q3-color, #ff9800)'; // Q3: Not Important, Urgent
+      return '#ff9800'; // Q3: Not Important & Urgent (orange)
     } else {
-      color = 'var(--q4-color, #2196f3)'; // Q4: Not Important, Not Urgent
+      return '#2196f3'; // Q4: Not Important & Not Urgent (blue)
     }
-    
-    return color;
   }
   
   showTooltip(content, element) {
@@ -1060,42 +979,17 @@ export class TaskManager {
       });
     }
     
-    // Setup chart initialization
-    let chartInitialized = false;
-    
-    // Add listener for custom chart initialization event
-    window.addEventListener('chartInitialized', () => {
-      chartInitialized = true;
-      console.log('Chart initialization event received');
-      
-      // Render tasks if we have them
-      if (this.tasks && this.tasks.length > 0) {
-        console.log(`Rendering ${this.tasks.length} tasks after chart init event`);
-        this.renderChart(this.tasks);
-      }
-    }, { once: true });
-    
-    // Initialize chart immediately
+    // Initialize chart (just once)
     this.initializeChart();
     
-    // Setup fallback rendering in case the event doesn't fire
+    // No need for extra event listeners or multiple delayed renders
+    // A single delayed render is sufficient as a fallback
     setTimeout(() => {
-      if (!chartInitialized && this.tasks && this.tasks.length > 0) {
-        console.log(`Chart event didn't fire, forcing render of ${this.tasks.length} tasks`);
+      if (this.tasks && this.tasks.length > 0) {
+        console.log(`Fallback: rendering ${this.tasks.length} tasks after delay`);
         this.renderChart(this.tasks);
       }
-    }, 500);
-    
-    // Add multiple delayed render attempts to ensure chart shows tasks
-    // Different timeouts to catch various possible initialization timings
-    [200, 800, 1500, 3000].forEach(delay => {
-      setTimeout(() => {
-        if (this.tasks && this.tasks.length > 0) {
-          console.log(`Rendering ${this.tasks.length} tasks after ${delay}ms delay`);
-          this.renderChart(this.tasks);
-        }
-      }, delay);
-    });
+    }, 1000);
     
     // Emit an event to let consumers know we're initialized
     this.emitUpdate();
@@ -1292,31 +1186,112 @@ export class TaskManager {
   }
 
   calculateTaskPosition(task) {
+    console.log(`DIAGNOSTIC: calculateTaskPosition for task ${task.id}`);
+    
+    // Make sure we have valid chart dimensions
     if (!this.chartWidth || !this.chartHeight) {
       console.warn('Chart dimensions not available, using defaults');
       this.chartWidth = 740;
       this.chartHeight = 520;
     }
 
-    // For x-axis (urgency): Map urgency from 1-10 scale to chart width
-    // For y-axis (importance): Map importance from 1-10 scale to chart height, but invert it
-    // because in SVG, y=0 is at the top, and we want high importance at the top
+    // Ensure we have valid importance and urgency values
+    // Default to middle values (5,5) if missing or invalid
+    const importance = (typeof task.importance === 'number' && !isNaN(task.importance)) 
+      ? task.importance 
+      : 5;
+    const urgency = (typeof task.urgency === 'number' && !isNaN(task.urgency)) 
+      ? task.urgency 
+      : 5;
     
-    const x = (task.urgency / 10) * this.chartWidth;
-    const y = this.chartHeight - (task.importance / 10) * this.chartHeight;
+    console.log(`DIAGNOSTIC: Using values: importance=${importance}, urgency=${urgency}`);
+    
+    // Add significant padding to ensure dots are well within the visible area
+    const padding = 60; // More padding to keep dots away from edges
+    
+    // Calculate available space after padding
+    const availableWidth = this.chartWidth - (padding * 2);
+    const availableHeight = this.chartHeight - (padding * 2);
+    
+    // Calculate position with even distribution across the chart
+    // Scale from 0-10 range to padded chart dimensions
+    const xScale = availableWidth / 10;
+    const yScale = availableHeight / 10;
+    
+    // Calculate position (invert y-axis since SVG 0,0 is top-left)
+    const x = padding + (urgency * xScale);
+    const y = this.chartHeight - padding - (importance * yScale);
+    
+    console.log(`DIAGNOSTIC: Final position: x=${x}, y=${y}, chartWidth=${this.chartWidth}, chartHeight=${this.chartHeight}`);
     
     return { x, y };
   }
 
   createTaskDot(task, x, y, dotSize) {
-    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dot.setAttribute("data-task-id", task.id);
-    dot.setAttribute("cx", x);
-    dot.setAttribute("cy", y);
-    dot.setAttribute("r", dotSize);
-    dot.setAttribute("fill", this.getQuadrantColorForTask(task));
-    dot.classList.add("task-dot");
-    return dot;
+    console.log(`DIAGNOSTIC: createTaskDot for task ${task.id} at position (${x}, ${y}) with size ${dotSize}`);
+    
+    try {
+      // Ensure we have a valid task ID
+      if (!task || !task.id) {
+        console.error('Invalid task object passed to createTaskDot:', task);
+        return null;
+      }
+      
+      // IMPORTANT: Create more visible dots
+      
+      // Create the dot with proper SVG namespace
+      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      
+      // Set essential attributes for visibility
+      dot.setAttribute("visibility", "visible");
+      dot.setAttribute("pointer-events", "all");
+      dot.setAttribute("opacity", "1");
+      
+      // Set all required attributes
+      dot.setAttribute("data-task-id", task.id);
+      dot.setAttribute("cx", x);
+      dot.setAttribute("cy", y);
+      dot.setAttribute("r", dotSize);
+      
+      // Get color based on quadrant - use hardcoded colors
+      const fillColor = this.getQuadrantColorForTask(task);
+      dot.setAttribute("fill", fillColor);
+      
+      // For extra visibility, add a style attribute with inline CSS
+      dot.setAttribute("style", `fill: ${fillColor}; stroke: black; stroke-width: 1px; opacity: 1; visibility: visible;`);
+      
+      // Add classes for styling
+      dot.classList.add("task-dot");
+      
+      // Add a stroke for better visibility
+      dot.setAttribute("stroke", '#000');
+      dot.setAttribute("stroke-width", "1");
+      
+      // Add a title attribute for hover text
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = task.name;
+      dot.appendChild(title);
+      
+      console.log(`DIAGNOSTIC: Dot created successfully with color ${fillColor}`);
+
+      // RENDER TEST: Add the dot directly to the SVG to test rendering
+      if (this.chartGroup) {
+        // Create a testing rectangle at the same position
+        const testRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        testRect.setAttribute("x", x - 5);
+        testRect.setAttribute("y", y - 5);
+        testRect.setAttribute("width", 10);
+        testRect.setAttribute("height", 10);
+        testRect.setAttribute("fill", "yellow");
+        testRect.setAttribute("stroke", "red");
+        this.chartGroup.appendChild(testRect);
+      }
+      
+      return dot;
+    } catch (error) {
+      console.error('Error creating task dot:', error);
+      return null;
+    }
   }
 
   addDotInteractions(dot, task) {
@@ -1453,5 +1428,71 @@ export class TaskManager {
     }
     
     return content;
+  }
+
+  // Add test dots that should be clearly visible
+  addVisibleTestDots() {
+    console.log('Adding visible test dots directly to SVG');
+    
+    // Get the chart container
+    const chartContainer = document.querySelector('#taskChart');
+    if (!chartContainer) {
+      console.error('Cannot find chart container');
+      return;
+    }
+    
+    // Create an inline SVG element with a direct DOM insertion
+    const testSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    testSvg.setAttribute("width", "100%");
+    testSvg.setAttribute("height", "100%");
+    testSvg.setAttribute("style", "position: absolute; top: 0; left: 0; z-index: 9999;");
+    
+    // Add test dots
+    // Red dot at top-left
+    const dot1 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot1.setAttribute("cx", "30");
+    dot1.setAttribute("cy", "30");
+    dot1.setAttribute("r", "15");
+    dot1.setAttribute("fill", "red");
+    dot1.setAttribute("stroke", "black");
+    dot1.setAttribute("stroke-width", "2");
+    
+    // Green dot at top-right
+    const dot2 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot2.setAttribute("cx", "730");
+    dot2.setAttribute("cy", "30");
+    dot2.setAttribute("r", "15");
+    dot2.setAttribute("fill", "green");
+    dot2.setAttribute("stroke", "black");
+    dot2.setAttribute("stroke-width", "2");
+    
+    // Blue dot at bottom-left
+    const dot3 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot3.setAttribute("cx", "30");
+    dot3.setAttribute("cy", "490");
+    dot3.setAttribute("r", "15");
+    dot3.setAttribute("fill", "blue");
+    dot3.setAttribute("stroke", "black");
+    dot3.setAttribute("stroke-width", "2");
+    
+    // Yellow dot at bottom-right
+    const dot4 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot4.setAttribute("cx", "730");
+    dot4.setAttribute("cy", "490");
+    dot4.setAttribute("r", "15");
+    dot4.setAttribute("fill", "yellow");
+    dot4.setAttribute("stroke", "black");
+    dot4.setAttribute("stroke-width", "2");
+    
+    // Add all dots to the test SVG
+    testSvg.appendChild(dot1);
+    testSvg.appendChild(dot2);
+    testSvg.appendChild(dot3);
+    testSvg.appendChild(dot4);
+    
+    // Add to the chart container
+    chartContainer.appendChild(testSvg);
+    
+    console.log('Test dots added directly to the DOM');
   }
 }

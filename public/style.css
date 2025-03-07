@@ -31,10 +31,10 @@
     --chart-grid-color: #e1e1e1;
     --chart-border-color: #ddd;
     
-    --q1-color: #e74c3c;
-    --q2-color: #3498db;
-    --q3-color: #f39c12;
-    --q4-color: #95a5a6;
+    --q1-color: #ff5252;    /* Important & Urgent */
+    --q2-color: #4caf50;    /* Important & Not Urgent */
+    --q3-color: #ff9800;    /* Not Important & Urgent */
+    --q4-color: #2196f3;    /* Not Important & Not Urgent */
 }
 
 .dark-theme {
@@ -698,6 +698,8 @@ input[type="range"]::-ms-thumb {
     margin: 0 auto 20px;
     overflow: hidden;
     transition: all 0.3s ease;
+    z-index: 10;
+    overflow: visible !important;
 }
 
 .dark-theme .chart-container {
@@ -873,9 +875,14 @@ input[type="range"]::-ms-thumb {
 
 /* Task dots styling */
 .task-dot {
-    cursor: pointer;
-    stroke: rgba(255, 255, 255, 0.8);
-    stroke-width: 1.5;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: all !important;
+    fill: currentColor !important;
+    stroke: #000000 !important;
+    stroke-width: 1px !important;
+    z-index: 9999 !important;
+    display: block !important;
 }
 
 .task-dot:hover {
@@ -1185,4 +1192,70 @@ input[type="range"]::-ms-thumb {
     justify-content: flex-end;
     padding: 10px 0;
     margin-bottom: 10px;
+}
+
+/* Ensure SVG container is visible */
+#taskChart svg {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  overflow: visible !important;
+}
+
+/* Ensure dot group is visible */
+.task-dots {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 999 !important;
+}
+
+/* Fix container visibility */
+#taskChart {
+    display: block !important;
+    visibility: visible !important;
+    overflow: visible !important;
+    z-index: 100 !important;
+    position: relative !important;
+}
+
+/* Enhanced focus effects */
+.highlight-pulse {
+  animation: pulse-highlight 1.5s ease-in-out;
+}
+
+@keyframes pulse-highlight {
+  0% { background-color: rgba(var(--accent-color-rgb, 66, 133, 244), 0); }
+  30% { background-color: rgba(var(--accent-color-rgb, 66, 133, 244), 0.2); }
+  70% { background-color: rgba(var(--accent-color-rgb, 66, 133, 244), 0.2); }
+  100% { background-color: rgba(var(--accent-color-rgb, 66, 133, 244), 0); }
+}
+
+.selected-task {
+  position: relative;
+  border-left: 4px solid var(--accent-color, #4285f4);
+  background-color: rgba(var(--accent-color-rgb, 66, 133, 244), 0.05);
+}
+
+.selected-dot {
+  animation: dot-pulse 2s infinite ease-in-out;
+}
+
+@keyframes dot-pulse {
+  0% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.5; }
+  100% { stroke-opacity: 1; }
+}
+
+/* Infographic chart styles */
+.task-node circle, .subtask-node circle, .root-node circle {
+  transition: all 0.3s ease;
+}
+
+.task-node:hover circle, .subtask-node:hover circle {
+  transform: scale(1.05);
+}
+
+.selected-dot {
+  stroke: #4285f4;
 }
