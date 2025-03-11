@@ -166,7 +166,16 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       getSubtasksForTask(taskId) {
-        return this.tasks.filter(task => task.parent_id === taskId);
+        const subtasks = this.tasks.filter(task => task.parent_id === taskId);
+        
+        // Debug logging for subtasks with links
+        subtasks.forEach(subtask => {
+          if (subtask.link) {
+            console.log(`UI: Displaying subtask ${subtask.id} with link: ${subtask.link}`);
+          }
+        });
+        
+        return subtasks;
       },
       
       showAddSubtaskForm(taskId) {
@@ -193,6 +202,15 @@ window.addEventListener('DOMContentLoaded', () => {
         
         this.showSubtaskModal = false;
         this.parentId = null;
+        
+        // Reset the newSubtask object
+        this.newSubtask = {
+          name: '',
+          importance: 5,
+          urgency: 5,
+          link: '',
+          due_date: null
+        };
       },
       
       selectTask(task) {
@@ -210,7 +228,23 @@ window.addEventListener('DOMContentLoaded', () => {
       saveSubtaskEdit() {
         if (!this.editingSubtask.name) return;
         
+        console.log("UI: Saving subtask edit:");
+        console.log("UI: Subtask ID:", this.editingSubtask.id);
+        console.log("UI: Subtask link before saving:", this.editingSubtask.link);
+        
+        // Ensure link is properly formatted
+        if (this.editingSubtask.link && typeof this.editingSubtask.link === 'string') {
+          // Add http:// prefix if missing
+          if (!/^https?:\/\//i.test(this.editingSubtask.link)) {
+            this.editingSubtask.link = 'http://' + this.editingSubtask.link;
+            console.log("UI: Added http:// prefix to link:", this.editingSubtask.link);
+          }
+        }
+        
+        console.log("UI: Final subtask link value being sent:", this.editingSubtask.link);
         taskOperations.updateSubtask(this.editingSubtask);
+        
+        this.showNotification("Saving subtask with link: " + (this.editingSubtask.link || "none"), "info");
         
         this.showEditForm = false;
         this.editingSubtask = {
@@ -265,6 +299,22 @@ window.addEventListener('DOMContentLoaded', () => {
         this.tasks = tasks;
         this.activeTasks = tasks.filter(task => !task.done && !task.parent_id);
         this.completedTasks = tasks.filter(task => task.done && !task.parent_id);
+        
+        // Debug: Log information about tasks with links
+        console.log('Tasks with links:');
+        tasks.forEach(task => {
+          if (task.link) {
+            console.log(`Task ${task.id} (${task.name}): ${task.link}`);
+          }
+        });
+        
+        // Debug: Count of subtasks with links
+        const subtasks = tasks.filter(task => task.parent_id);
+        const subtasksWithLinks = subtasks.filter(task => task.link);
+        console.log(`Subtasks with links: ${subtasksWithLinks.length} out of ${subtasks.length}`);
+        if (subtasksWithLinks.length > 0) {
+          console.log('Subtasks with links:', subtasksWithLinks);
+        }
       },
       
       formatDate(dateString) {
@@ -274,13 +324,44 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       formatLinkDisplay(url) {
-        if (!url) return '';
+        if (!url) return 'No link';
         try {
+          console.log('Formatting link:', url); // Debug logging
           const urlObj = new URL(url);
-          return urlObj.hostname;
+          // Show domain and first part of path if exists
+          let displayText = urlObj.hostname;
+          if (urlObj.pathname && urlObj.pathname !== '/') {
+            // Add first part of path if not too long
+            const pathParts = urlObj.pathname.split('/').filter(p => p);
+            if (pathParts.length > 0) {
+              const firstPart = pathParts[0];
+              if (firstPart.length < 10) {
+                displayText += '/' + firstPart;
+                if (pathParts.length > 1) {
+                  displayText += '/...';
+                }
+              }
+            }
+          }
+          return displayText || url;
         } catch (e) {
-          return url;
+          console.warn('Error formatting link:', e, url);
+          // If not a valid URL, return first part of string with reasonable length
+          return url.length > 20 ? url.substring(0, 18) + '...' : url;
         }
+      },
+      
+      // Debug helper for links
+      debugLinkInfo(subtask) {
+        console.log('Subtask link info:', {
+          id: subtask.id,
+          name: subtask.name,
+          hasLink: !!subtask.link,
+          linkValue: subtask.link,
+          linkType: typeof subtask.link,
+          displayValue: this.formatLinkDisplay(subtask.link)
+        });
+        return !!subtask.link;
       },
       
       showNotification(text, color = 'primary', timeout = 3000) {

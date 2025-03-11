@@ -175,8 +175,8 @@ class Database {
   async addSubtask(subtask, parentId) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        "INSERT INTO tasks (name, importance, urgency, parent_id) VALUES (?, ?, ?, ?)",
-        [subtask.name, subtask.importance, subtask.urgency, parentId],
+        "INSERT INTO tasks (name, importance, urgency, parent_id, link, due_date) VALUES (?, ?, ?, ?, ?, ?)",
+        [subtask.name, subtask.importance, subtask.urgency, parentId, subtask.link, subtask.due_date],
         function (err) {
           if (err) {
             console.error("Error adding subtask:", err);
@@ -191,20 +191,37 @@ class Database {
   }
 
   async updateSubtask(subtask) {
+    console.log("DATABASE: Updating subtask with ID:", subtask.id);
+    console.log("DATABASE: Subtask link value being saved:", subtask.link);
+    console.log("DATABASE: Subtask link type:", typeof subtask.link);
+    
     return new Promise((resolve, reject) => {
-      this.db.run(
-        "UPDATE tasks SET name = ?, importance = ?, urgency = ?, parent_id = ?, link = ?, due_date = ? WHERE id = ?",
-        [subtask.name, subtask.importance, subtask.urgency, subtask.parent_id, subtask.link, subtask.due_date, subtask.id],
-        function (err) {
-          if (err) {
-            console.error("Error updating subtask:", err);
-            reject(err);
-            return;
+      if (!this.db) {
+        console.error("Database connection not available");
+        return reject(new Error("Database connection not available"));
+      }
+      
+      try {
+        this.db.run(
+          "UPDATE tasks SET name = ?, importance = ?, urgency = ?, parent_id = ?, link = ?, due_date = ? WHERE id = ?",
+          [subtask.name, subtask.importance, subtask.urgency, subtask.parent_id, subtask.link, subtask.due_date, subtask.id],
+          function(err) {
+            if (err) {
+              console.error("Error updating subtask:", err);
+              reject(err);
+              return;
+            }
+            
+            // Success - resolve with number of rows changed
+            resolve(this.changes);
+            console.log("Subtask updated successfully:", subtask.id, "Changes:", this.changes);
+            console.log("Updated link value:", subtask.link);
           }
-          resolve(this.changes);
-          console.log("Subtask updated:", subtask.id, "Changes:", this.changes);
-        }
-      );
+        );
+      } catch (error) {
+        console.error("Exception during subtask update:", error);
+        reject(error);
+      }
     });
   }
 

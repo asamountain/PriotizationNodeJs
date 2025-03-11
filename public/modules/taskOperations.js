@@ -63,6 +63,15 @@ export class TaskOperations {
   addSubtask(subtask, parentId) {
     console.log('TaskOperations.addSubtask called with:', subtask, 'parentId:', parentId);
     
+    // Ensure link is properly formatted
+    if (subtask.link && typeof subtask.link === 'string') {
+      // Add http:// prefix if missing
+      if (!/^https?:\/\//i.test(subtask.link)) {
+        subtask.link = 'http://' + subtask.link;
+        console.log('Added http:// prefix to link:', subtask.link);
+      }
+    }
+    
     // Find parent task name safely
     let parentName = "Unknown Task";
     
@@ -106,6 +115,15 @@ export class TaskOperations {
   updateSubtask(subtask) {
     console.log('TaskOperations.updateSubtask called with:', subtask);
     
+    // Ensure link is properly formatted
+    if (subtask.link && typeof subtask.link === 'string') {
+      // Add http:// prefix if missing
+      if (!/^https?:\/\//i.test(subtask.link)) {
+        subtask.link = 'http://' + subtask.link;
+        console.log('Added http:// prefix to link:', subtask.link);
+      }
+    }
+    
     // Get socket safely
     const socket = window.app?.socket || 
                   (typeof io !== 'undefined' ? io(window.location.origin) : null);
@@ -121,6 +139,13 @@ export class TaskOperations {
       originalSubtask = window.app.tasks.find(t => t.id === subtask.id);
     }
     
+    // Log link state before sending
+    console.log('Link state before update:', {
+      subtaskId: subtask.id,
+      originalLink: originalSubtask?.link,
+      newLink: subtask.link
+    });
+    
     // Send the update
     socket.emit('updateSubtask', { subtask });
     
@@ -133,10 +158,20 @@ export class TaskOperations {
         if (originalSubtask.name !== subtask.name) changes.push("name");
         if (originalSubtask.importance !== subtask.importance) changes.push("importance");
         if (originalSubtask.urgency !== subtask.urgency) changes.push("urgency");
-        if (originalSubtask.link !== subtask.link) changes.push("link");
+        if (originalSubtask.link !== subtask.link) {
+          changes.push("link");
+          // Special notification for link changes
+          if (!originalSubtask.link && subtask.link) {
+            message = `Added link to subtask "${subtask.name}"`;
+          } else if (originalSubtask.link && !subtask.link) {
+            message = `Removed link from subtask "${subtask.name}"`;
+          } else if (originalSubtask.link && subtask.link && originalSubtask.link !== subtask.link) {
+            message = `Updated link for subtask "${subtask.name}"`;
+          }
+        }
         if (originalSubtask.due_date !== subtask.due_date) changes.push("due date");
         
-        if (changes.length > 0) {
+        if (changes.length > 0 && message === "Updated subtask") {
           message += ": " + changes.join(", ");
         }
       }
@@ -152,6 +187,15 @@ export class TaskOperations {
 
   editTask(task) {
     console.log('TaskOperations.editTask called with:', task);
+    
+    // Ensure link is properly formatted
+    if (task.link && typeof task.link === 'string') {
+      // Add http:// prefix if missing
+      if (!/^https?:\/\//i.test(task.link)) {
+        task.link = 'http://' + task.link;
+        console.log('Added http:// prefix to link:', task.link);
+      }
+    }
     
     // Get socket safely
     const socket = window.app?.socket || 
@@ -171,6 +215,13 @@ export class TaskOperations {
       originalTask = window.app.tasks.find(t => t.id === task.id);
     }
     
+    // Log link state before sending
+    console.log('Link state before update:', {
+      taskId: task.id,
+      originalLink: originalTask?.link,
+      newLink: task.link
+    });
+    
     // Send the edit request
     socket.emit('editTask', task);
     console.log('Emitted editTask event to server');
@@ -185,9 +236,19 @@ export class TaskOperations {
         if (originalTask.importance !== task.importance) changes.push("importance");
         if (originalTask.urgency !== task.urgency) changes.push("urgency");
         if (originalTask.due_date !== task.due_date) changes.push("due date");
-        if (originalTask.link !== task.link) changes.push("link");
+        if (originalTask.link !== task.link) {
+          changes.push("link");
+          // Special notification for link changes
+          if (!originalTask.link && task.link) {
+            message = `Added link to task "${task.name}"`;
+          } else if (originalTask.link && !task.link) {
+            message = `Removed link from task "${task.name}"`;
+          } else if (originalTask.link && task.link && originalTask.link !== task.link) {
+            message = `Updated link for task "${task.name}"`;
+          }
+        }
         
-        if (changes.length > 0) {
+        if (changes.length > 0 && message === "Updated task") {
           message += ": " + changes.join(", ");
         }
       }

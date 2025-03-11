@@ -103,6 +103,26 @@
         overflow: visible !important;
         z-index: 1;
       }
+      
+      /* Custom style for subtask link chips */
+      .subtask-link-chip {
+        cursor: pointer !important;
+        transition: all 0.2s ease;
+      }
+      
+      .subtask-link-chip:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2) !important;
+        background-color: rgba(125, 125, 255, 0.1);
+      }
+      
+      .subtask-link-chip .v-chip__content {
+        color: #3f51b5 !important;
+      }
+      
+      .subtask-link-chip .v-chip__content .v-icon {
+        color: #651fff !important;
+      }
     </style>
 </head>
 <body>
@@ -248,9 +268,12 @@
                                                     color="primary"
                                                     variant="outlined"
                                                     @click.stop
+                                                    class="subtask-link-chip"
+                                                    elevation="1"
+                                                    :title="task.link"
                                                 >
-                                                    <v-icon start size="x-small">mdi-link</v-icon>
-                                                    {{ formatLinkDisplay(task.link) }}
+                                                    <v-icon start size="x-small" class="me-1">mdi-link</v-icon>
+                                                    <span class="text-decoration-underline">{{ formatLinkDisplay(task.link) }}</span>
                                                 </v-chip>
                                             </div>
                                             
@@ -332,22 +355,36 @@
                                             </template>
                                             
                                             <v-list-item-title :class="{'text-decoration-line-through': subtask.done}">
-                                                                    {{ subtask.name }}
+                                                {{ subtask.name }}
+                                                <v-icon v-if="subtask.link" size="x-small" color="primary" class="ms-1">mdi-link</v-icon>
                                             </v-list-item-title>
                                             
+                                            <!-- Always show this for debugging -->
+                                            <v-list-item-subtitle class="mt-1 mb-1 text-caption" style="color: #1E88E5;">
+                                                <template v-if="subtask.link">
+                                                    <a :href="subtask.link" target="_blank" class="text-decoration-underline" @click.stop>
+                                                        {{ formatLinkDisplay(subtask.link) }}
+                                                    </a>
+                                                </template>
+                                                <template v-else>
+                                                    <span @click.stop="debugLinkInfo(subtask)" style="cursor: pointer; color: #9E9E9E;">
+                                                        No link (click to debug)
+                                                    </span>
+                                                </template>
+                                            </v-list-item-subtitle>
+                                            
                                             <template v-slot:append>
-                                                <v-chip
+                                                <v-btn
                                                     v-if="subtask.link"
+                                                    icon="mdi-open-in-new"
+                                                    variant="text"
                                                     size="x-small"
-                                                                   :href="subtask.link" 
-                                                                   target="_blank"
-                                                    color="secondary"
-                                                    variant="outlined"
+                                                    :href="subtask.link"
+                                                    target="_blank"
+                                                    color="primary"
                                                     class="me-2"
                                                     @click.stop
-                                                >
-                                                    <v-icon start size="x-small">mdi-link</v-icon>
-                                                </v-chip>
+                                                ></v-btn>
                                                 <v-chip size="x-small" color="primary" class="me-2">I: {{ subtask.importance }}</v-chip>
                                                 <v-chip size="x-small" color="secondary">U: {{ subtask.urgency }}</v-chip>
                                                 <v-btn

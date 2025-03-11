@@ -4,15 +4,32 @@ import database from "./db.js";
 const setupSocket = (io) => {
   // Process tasks to ensure numeric values
   const processTaskData = (tasks) => {
-    return tasks.map((task) => ({
-      id: task.id,
-      name: task.name,
-      importance: Number(task.importance) || 0,
-      urgency: Number(task.urgency) || 0,
-      done: task.done === 1 || task.done === true || task.done === "true",
-      created_at: task.created_at,
-      parent_id: task.parent_id
-    }));
+    console.log("SOCKET: Processing task data - before processing:", tasks.slice(0, 2));  
+    
+    const processed = tasks.map((task) => {
+      const result = {
+        id: task.id,
+        name: task.name,
+        importance: Number(task.importance) || 0,
+        urgency: Number(task.urgency) || 0,
+        done: task.done === 1 || task.done === true || task.done === "true",
+        created_at: task.created_at,
+        completed_at: task.completed_at,
+        parent_id: task.parent_id,
+        link: task.link || null,
+        due_date: task.due_date || null
+      };
+      
+      // Debug logging for link
+      if (task.link) {
+        console.log(`SOCKET: Task ${task.id} link before: ${task.link}, after: ${result.link}`);
+      }
+      
+      return result;
+    });
+    
+    console.log("SOCKET: After processing - sample:", processed.slice(0, 2));
+    return processed;
   };
   io.on("connection", (socket) => {
     console.log("New client connected");
@@ -104,11 +121,25 @@ const setupSocket = (io) => {
 
     socket.on("updateSubtask", async ({ subtask }) => {
       try {
-        console.log("Updating subtask:", subtask);
+        console.log("SOCKET: Received updateSubtask request:");
+        console.log("SOCKET: Subtask ID:", subtask.id);
+        console.log("SOCKET: Subtask link:", subtask.link);
+        console.log("SOCKET: Subtask link type:", typeof subtask.link);
+        
         await database.updateSubtask(subtask);
-        console.log("Subtask updated successfully");
+        console.log("SOCKET: Subtask updated successfully");
 
         const data = await getTaskData();
+        
+        // Check if the link was preserved in the fetched data
+        const updatedSubtask = data.find(t => t.id === subtask.id);
+        if (updatedSubtask) {
+          console.log("SOCKET: Verification - fetched subtask after update:", updatedSubtask);
+          console.log("SOCKET: Verified link in fetched data:", updatedSubtask.link);
+        } else {
+          console.error("SOCKET: Could not find updated subtask in fetched data");
+        }
+        
         io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         console.error("Failed to update subtask:", error);
