@@ -122,7 +122,7 @@ export class TaskOperations {
     }
     
     // Send the update
-    socket.emit('updateSubtask', subtask);
+    socket.emit('updateSubtask', { subtask });
     
     // Handle response
     socket.once('updateTasks', () => {
@@ -133,6 +133,59 @@ export class TaskOperations {
         if (originalSubtask.name !== subtask.name) changes.push("name");
         if (originalSubtask.importance !== subtask.importance) changes.push("importance");
         if (originalSubtask.urgency !== subtask.urgency) changes.push("urgency");
+        if (originalSubtask.link !== subtask.link) changes.push("link");
+        if (originalSubtask.due_date !== subtask.due_date) changes.push("due date");
+        
+        if (changes.length > 0) {
+          message += ": " + changes.join(", ");
+        }
+      }
+      
+      // Show notification
+      if (window.app?.showNotification) {
+        window.app.showNotification(message, 'success');
+      } else {
+        console.log(message);
+      }
+    });
+  }
+
+  editTask(task) {
+    console.log('TaskOperations.editTask called with:', task);
+    
+    // Get socket safely
+    const socket = window.app?.socket || 
+                  (typeof io !== 'undefined' ? io(window.location.origin) : null);
+    
+    if (!socket) {
+      console.error('No socket connection available');
+      if (window.app?.showNotification) {
+        window.app.showNotification('Connection error, try refreshing the page', 'error');
+      }
+      return;
+    }
+    
+    // Find original task for comparison
+    let originalTask = null;
+    if (window.app?.tasks) {
+      originalTask = window.app.tasks.find(t => t.id === task.id);
+    }
+    
+    // Send the edit request
+    socket.emit('editTask', task);
+    console.log('Emitted editTask event to server');
+    
+    // Handle response
+    socket.once('updateTasks', () => {
+      // Create message about what changed
+      let message = "Updated task";
+      if (originalTask) {
+        const changes = [];
+        if (originalTask.name !== task.name) changes.push("name");
+        if (originalTask.importance !== task.importance) changes.push("importance");
+        if (originalTask.urgency !== task.urgency) changes.push("urgency");
+        if (originalTask.due_date !== task.due_date) changes.push("due date");
+        if (originalTask.link !== task.link) changes.push("link");
         
         if (changes.length > 0) {
           message += ": " + changes.join(", ");

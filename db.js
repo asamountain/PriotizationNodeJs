@@ -193,8 +193,8 @@ class Database {
   async updateSubtask(subtask) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        "UPDATE tasks SET name = ?, importance = ?, urgency = ?, parent_id = ? WHERE id = ?",
-        [subtask.name, subtask.importance, subtask.urgency, subtask.parent_id, subtask.id],
+        "UPDATE tasks SET name = ?, importance = ?, urgency = ?, parent_id = ?, link = ?, due_date = ? WHERE id = ?",
+        [subtask.name, subtask.importance, subtask.urgency, subtask.parent_id, subtask.link, subtask.due_date, subtask.id],
         function (err) {
           if (err) {
             console.error("Error updating subtask:", err);
@@ -203,6 +203,24 @@ class Database {
           }
           resolve(this.changes);
           console.log("Subtask updated:", subtask.id, "Changes:", this.changes);
+        }
+      );
+    });
+  }
+
+  async editTask(task) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE tasks SET name = ?, importance = ?, urgency = ?, link = ?, due_date = ? WHERE id = ?",
+        [task.name, task.importance, task.urgency, task.link, task.due_date, task.id],
+        function (err) {
+          if (err) {
+            console.error("Error editing task:", err);
+            reject(err);
+            return;
+          }
+          resolve(this.changes);
+          console.log("Task edited:", task.id, "Changes:", this.changes);
         }
       );
     });
@@ -219,6 +237,7 @@ export const deleteTask = (...args) => database.deleteTask(...args);
 export const toggleTaskDone = (...args) => database.toggleTaskDone(...args);
 export const addSubtask = (...args) => database.addSubtask(...args);
 export const updateSubtask = (...args) => database.updateSubtask(...args);
+export const editTask = (...args) => database.editTask(...args);
 export const initDatabase = async () => {
   try {
     await database.init();

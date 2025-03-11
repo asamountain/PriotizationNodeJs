@@ -1,4 +1,4 @@
-import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone } from "./db.js";
+import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone, editTask } from "./db.js";
 import database from "./db.js";
 
 const setupSocket = (io) => {
@@ -112,6 +112,19 @@ const setupSocket = (io) => {
         io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         console.error("Failed to update subtask:", error);
+      }
+    });
+
+    socket.on("editTask", async (task) => {
+      try {
+        console.log("Editing task:", task);
+        await editTask(task);
+        console.log("Task edited successfully");
+
+        const data = await getTaskData();
+        io.emit("updateTasks", { data: processTaskData(data) });
+      } catch (error) {
+        console.error("Failed to edit task:", error);
       }
     });
 

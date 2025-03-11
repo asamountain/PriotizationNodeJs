@@ -91,7 +91,17 @@ window.addEventListener('DOMContentLoaded', () => {
           importance: 5,
           urgency: 5,
           parent_id: null,
-          link: ''
+          link: '',
+          due_date: null
+        },
+        showTaskEditForm: false,
+        editingTask: {
+          id: null,
+          name: '',
+          importance: 5,
+          urgency: 5,
+          link: '',
+          due_date: null
         },
         possibleParents: [],
         snackbar: {
@@ -209,12 +219,38 @@ window.addEventListener('DOMContentLoaded', () => {
           importance: 5,
           urgency: 5,
           parent_id: null,
-          link: ''
+          link: '',
+          due_date: null
         };
       },
       
       cancelEdit() {
         this.showEditForm = false;
+      },
+      
+      editTask(task) {
+        this.editingTask = { ...task };
+        this.showTaskEditForm = true;
+      },
+      
+      saveTaskEdit() {
+        if (!this.editingTask.name) return;
+        
+        taskOperations.editTask(this.editingTask);
+        
+        this.showTaskEditForm = false;
+        this.editingTask = {
+          id: null,
+          name: '',
+          importance: 5,
+          urgency: 5,
+          link: '',
+          due_date: null
+        };
+      },
+      
+      cancelTaskEdit() {
+        this.showTaskEditForm = false;
       },
       
       toggleTaskSection(section) {

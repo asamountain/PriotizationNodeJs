@@ -289,6 +289,22 @@
                                                 size="small"
                                                 @click.stop="showAddSubtaskForm(task.id)"
                                                 color="primary"
+                                                class="mr-1"
+                                            ></v-btn>
+                                            <v-btn
+                                                icon="mdi-pencil"
+                                                variant="text"
+                                                size="small"
+                                                @click.stop="editTask(task)"
+                                                color="secondary"
+                                                class="mr-1"
+                                            ></v-btn>
+                                            <v-btn
+                                                icon="mdi-delete"
+                                                variant="text"
+                                                size="small"
+                                                @click.stop="deleteTask(task.id)"
+                                                color="error"
                                             ></v-btn>
                                         </template>
                                     </v-list-item>
@@ -334,6 +350,14 @@
                                                 </v-chip>
                                                 <v-chip size="x-small" color="primary" class="me-2">I: {{ subtask.importance }}</v-chip>
                                                 <v-chip size="x-small" color="secondary">U: {{ subtask.urgency }}</v-chip>
+                                                <v-btn
+                                                    icon="mdi-pencil"
+                                                    variant="text"
+                                                    size="x-small"
+                                                    @click.stop="editSubtask(subtask)"
+                                                    color="secondary"
+                                                    class="ms-2"
+                                                ></v-btn>
                                             </template>
                                         </v-list-item>
                                     </div>
@@ -501,55 +525,120 @@
                 <v-card>
                     <v-card-title class="text-h5">Edit Subtask</v-card-title>
                     <v-card-text>
-                        <v-text-field
-                        v-model="editingSubtask.name"
-                            label="Subtask Name"
-                        required
-                            variant="outlined"
-                        ></v-text-field>
-                        
-                        <v-text-field
-                        v-model="editingSubtask.link"
-                            label="Link (optional)"
-                            variant="outlined"
-                        placeholder="Add a URL (http://example.com)"
-                        ></v-text-field>
-                        
-                        <v-subheader>Importance (1-10)</v-subheader>
-                        <v-slider
-                            v-model="editingSubtask.importance"
-                            min="1"
-                            max="10"
-                            step="1"
-                            show-ticks="always"
-                            thumb-label
-                            color="primary"
-                        ></v-slider>
-                        
-                        <v-subheader>Urgency (1-10)</v-subheader>
-                        <v-slider
-                            v-model="editingSubtask.urgency"
-                            min="1"
-                            max="10"
-                            step="1"
-                            show-ticks="always"
-                            thumb-label
-                            color="secondary"
-                        ></v-slider>
-                        
-                        <v-select
-                        v-model="editingSubtask.parent_id"
-                            :items="possibleParents"
-                            item-title="name"
-                            item-value="id"
-                            label="Parent Task (Active Only)"
-                            variant="outlined"
-                        ></v-select>
+                        <v-form @submit.prevent="saveSubtaskEdit">
+                            <v-text-field
+                                v-model="editingSubtask.name"
+                                label="Subtask Name"
+                                required
+                                variant="outlined"
+                            ></v-text-field>
+                            
+                            <v-text-field
+                                v-model="editingSubtask.link"
+                                label="Link (optional)"
+                                variant="outlined"
+                                placeholder="Add a URL (http://example.com)"
+                            ></v-text-field>
+                            
+                            <v-subheader>Importance (1-10)</v-subheader>
+                            <v-slider
+                                v-model="editingSubtask.importance"
+                                min="1"
+                                max="10"
+                                step="1"
+                                show-ticks="always"
+                                thumb-label
+                                color="primary"
+                            ></v-slider>
+                            
+                            <v-subheader>Urgency (1-10)</v-subheader>
+                            <v-slider
+                                v-model="editingSubtask.urgency"
+                                min="1"
+                                max="10"
+                                step="1"
+                                show-ticks="always"
+                                thumb-label
+                                color="secondary"
+                            ></v-slider>
+                            
+                            <v-select
+                                v-model="editingSubtask.parent_id"
+                                :items="possibleParents"
+                                item-title="name"
+                                item-value="id"
+                                label="Parent Task"
+                                variant="outlined"
+                            ></v-select>
+                            
+                            <v-date-picker
+                                v-model="editingSubtask.due_date"
+                                label="Due Date (Optional)"
+                                variant="outlined"
+                            ></v-date-picker>
+                        </v-form>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
                         <v-btn color="grey" variant="text" @click="cancelEdit">Cancel</v-btn>
-                        <v-btn color="primary" variant="elevated" @click="saveSubtaskEdit">Save Changes</v-btn>
+                        <v-btn color="primary" variant="elevated" @click="saveSubtaskEdit">Save</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Edit Task Dialog -->
+            <v-dialog v-model="showTaskEditForm" max-width="500px">
+                <v-card>
+                    <v-card-title class="text-h5">Edit Task</v-card-title>
+                    <v-card-text>
+                        <v-form @submit.prevent="saveTaskEdit">
+                            <v-text-field
+                                v-model="editingTask.name"
+                                label="Task Name"
+                                required
+                                variant="outlined"
+                            ></v-text-field>
+                            
+                            <v-text-field
+                                v-model="editingTask.link"
+                                label="Link (optional)"
+                                variant="outlined"
+                                placeholder="Add a URL (http://example.com)"
+                            ></v-text-field>
+                            
+                            <v-subheader>Importance (1-10)</v-subheader>
+                            <v-slider
+                                v-model="editingTask.importance"
+                                min="1"
+                                max="10"
+                                step="1"
+                                show-ticks="always"
+                                thumb-label
+                                color="primary"
+                            ></v-slider>
+                            
+                            <v-subheader>Urgency (1-10)</v-subheader>
+                            <v-slider
+                                v-model="editingTask.urgency"
+                                min="1"
+                                max="10"
+                                step="1"
+                                show-ticks="always"
+                                thumb-label
+                                color="secondary"
+                            ></v-slider>
+                            
+                            <v-date-picker
+                                v-model="editingTask.due_date"
+                                label="Due Date (Optional)"
+                                variant="outlined"
+                            ></v-date-picker>
+                        </v-form>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="grey" variant="text" @click="cancelTaskEdit">Cancel</v-btn>
+                        <v-btn color="primary" variant="elevated" @click="saveTaskEdit">Save</v-btn>
                     </v-card-actions>
                 </v-card>
             </v-dialog>
