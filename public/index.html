@@ -251,61 +251,93 @@
                                             ></v-checkbox>
                                         </template>
 
-                                        <v-list-item-title :class="{'text-decoration-line-through': task.done}">
-                                            {{ task.name }}
-                                        </v-list-item-title>
-
-                                        <v-list-item-subtitle>
-                                            <div class="d-flex align-center">
-                                                <span class="text-caption text-medium-emphasis me-2" v-if="task.created_at">
-                                                    Created: {{ formatDate(task.created_at) }}
-                                                </span>
-                                                <v-chip
-                                                    v-if="task.link"
-                                                    size="x-small"
-                                                       :href="task.link" 
-                                                       target="_blank"
-                                                    color="primary"
-                                                    variant="outlined"
-                                                    @click.stop
-                                                    class="subtask-link-chip"
-                                                    elevation="1"
-                                                    :title="task.link"
-                                                >
-                                                    <v-icon start size="x-small" class="me-1">mdi-link</v-icon>
-                                                    <span class="text-decoration-underline">{{ formatLinkDisplay(task.link) }}</span>
-                                                </v-chip>
-                                            </div>
-                                            
-                                            <!-- Importance and Urgency Indicators -->
-                                            <div class="d-flex mt-2">
-                                                <v-progress-linear
-                                                    class="me-2 flex-grow-1"
-                                                    :model-value="task.importance * 10"
-                                                    height="10"
-                                                    color="primary"
-                                                    rounded
-                                                >
-                                                    <template v-slot:default>
-                                                        <span class="text-caption text-white">I: {{ task.importance }}</span>
-                                                    </template>
-                                                </v-progress-linear>
+                                        <div class="d-flex flex-column flex-grow-1">
+                                            <div class="d-flex align-items-center">
+                                                <v-list-item-title :class="{'text-decoration-line-through': task.done}" class="me-3">
+                                                    {{ task.name }}
+                                                </v-list-item-title>
                                                 
-                                                <v-progress-linear
-                                                    class="flex-grow-1"
-                                                    :model-value="task.urgency * 10"
-                                                    height="10"
-                                                    color="secondary"
-                                                    rounded
-                                                >
-                                                    <template v-slot:default>
-                                                        <span class="text-caption text-white">U: {{ task.urgency }}</span>
-                                                    </template>
-                                                </v-progress-linear>
+                                                <!-- Importance and Urgency moved next to title -->
+                                                <div class="d-flex align-items-center" style="width: 33%;">
+                                                    <v-progress-linear
+                                                        class="me-2"
+                                                        :model-value="task.importance * 10"
+                                                        height="8"
+                                                        color="primary"
+                                                        rounded
+                                                        style="min-width: 60px; max-width: 100px;"
+                                                    >
+                                                        <template v-slot:default>
+                                                            <span class="text-caption text-white">I: {{ task.importance }}</span>
+                                                        </template>
+                                                    </v-progress-linear>
+                                                    
+                                                    <v-progress-linear
+                                                        :model-value="task.urgency * 10"
+                                                        height="8"
+                                                        color="secondary"
+                                                        rounded
+                                                        style="min-width: 60px; max-width: 100px;"
+                                                    >
+                                                        <template v-slot:default>
+                                                            <span class="text-caption text-white">U: {{ task.urgency }}</span>
+                                                        </template>
+                                                    </v-progress-linear>
+                                                </div>
                                             </div>
-                                        </v-list-item-subtitle>
+
+                                            <v-list-item-subtitle>
+                                                <div class="d-flex align-center">
+                                                    <span class="text-caption text-medium-emphasis me-2" v-if="task.created_at">
+                                                        Created: {{ formatDate(task.created_at) }}
+                                                    </span>
+                                                    <v-chip
+                                                        v-if="task.link"
+                                                        size="x-small"
+                                                        :href="task.link" 
+                                                        target="_blank"
+                                                        color="primary"
+                                                        variant="outlined"
+                                                        @click.stop
+                                                        class="subtask-link-chip me-2"
+                                                        elevation="1"
+                                                        :title="task.link"
+                                                    >
+                                                        <v-icon start size="x-small" class="me-1">mdi-link</v-icon>
+                                                        <span class="text-decoration-underline">{{ formatLinkDisplay(task.link) }}</span>
+                                                    </v-chip>
+                                                    
+                                                    <!-- Notes indicator chip -->
+                                                    <v-chip
+                                                        v-if="task.notes"
+                                                        size="x-small"
+                                                        color="info"
+                                                        variant="outlined"
+                                                        @click.stop="showTaskNotes(task)"
+                                                        class="me-2"
+                                                    >
+                                                        <v-icon start size="x-small" class="me-1">mdi-note-text</v-icon>
+                                                        <span>Notes</span>
+                                                    </v-chip>
+                                                </div>
+                                                
+                                                <!-- Notes preview if exists -->
+                                                <div v-if="task.notes" class="mt-1 text-caption text-truncate" style="max-width: 100%; color: #757575;">
+                                                    {{ task.notes.substring(0, 100) }}{{ task.notes.length > 100 ? '...' : '' }}
+                                                </div>
+                                            </v-list-item-subtitle>
+                                        </div>
 
                                         <template v-slot:append>
+                                            <v-btn
+                                                icon="mdi-note-edit"
+                                                variant="text"
+                                                size="small"
+                                                @click.stop="editTaskNotes(task)"
+                                                color="info"
+                                                class="mr-1"
+                                                :title="task.notes ? 'Edit notes' : 'Add notes'"
+                                            ></v-btn>
                                             <v-btn
                                                 icon="mdi-plus"
                                                 variant="text"
@@ -354,24 +386,19 @@
                                                 ></v-checkbox>
                                             </template>
                                             
-                                            <v-list-item-title :class="{'text-decoration-line-through': subtask.done}">
-                                                {{ subtask.name }}
-                                                <v-icon v-if="subtask.link" size="x-small" color="primary" class="ms-1">mdi-link</v-icon>
-                                            </v-list-item-title>
-                                            
-                                            <!-- Always show this for debugging -->
-                                            <v-list-item-subtitle class="mt-1 mb-1 text-caption" style="color: #1E88E5;">
-                                                <template v-if="subtask.link">
-                                                    <a :href="subtask.link" target="_blank" class="text-decoration-underline" @click.stop>
-                                                        {{ formatLinkDisplay(subtask.link) }}
-                                                    </a>
-                                                </template>
-                                                <template v-else>
-                                                    <span @click.stop="debugLinkInfo(subtask)" style="cursor: pointer; color: #9E9E9E;">
-                                                        No link (click to debug)
-                                                    </span>
-                                                </template>
-                                            </v-list-item-subtitle>
+                                            <div class="d-flex align-items-center">
+                                                <v-list-item-title :class="{'text-decoration-line-through': subtask.done}" class="me-3">
+                                                    {{ subtask.name }}
+                                                    <v-icon v-if="subtask.link" size="x-small" color="primary" class="ms-1">mdi-link</v-icon>
+                                                    <v-icon v-if="subtask.notes" size="x-small" color="info" class="ms-1">mdi-note-text</v-icon>
+                                                </v-list-item-title>
+                                                
+                                                <!-- Progress bars moved next to title -->
+                                                <div class="d-flex align-items-center" style="min-width: 120px;">
+                                                    <v-chip size="x-small" color="primary" class="me-1">I: {{ subtask.importance }}</v-chip>
+                                                    <v-chip size="x-small" color="secondary">U: {{ subtask.urgency }}</v-chip>
+                                                </div>
+                                            </div>
                                             
                                             <template v-slot:append>
                                                 <v-btn
@@ -385,8 +412,14 @@
                                                     class="me-2"
                                                     @click.stop
                                                 ></v-btn>
-                                                <v-chip size="x-small" color="primary" class="me-2">I: {{ subtask.importance }}</v-chip>
-                                                <v-chip size="x-small" color="secondary">U: {{ subtask.urgency }}</v-chip>
+                                                <v-btn
+                                                    icon="mdi-note-edit"
+                                                    variant="text"
+                                                    size="x-small"
+                                                    @click.stop="editSubtaskNotes(subtask)"
+                                                    color="info"
+                                                    class="me-2"
+                                                ></v-btn>
                                                 <v-btn
                                                     icon="mdi-pencil"
                                                     variant="text"
@@ -676,6 +709,31 @@
                         <v-spacer></v-spacer>
                         <v-btn color="grey" variant="text" @click="cancelTaskEdit">Cancel</v-btn>
                         <v-btn color="primary" variant="elevated" @click="saveTaskEdit">Save</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Notes Dialog -->
+            <v-dialog v-model="showNotesDialog" max-width="600px">
+                <v-card>
+                    <v-card-title class="text-h5">
+                        {{ currentTask ? 'Notes for: ' + currentTask.name : 'Task Notes' }}
+                    </v-card-title>
+                    <v-card-text>
+                        <v-textarea
+                            v-model="editingNotes"
+                            label="Task Notes"
+                            variant="outlined"
+                            rows="8"
+                            counter
+                            auto-grow
+                            placeholder="Add your notes here..."
+                        ></v-textarea>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="grey" variant="text" @click="closeNotesDialog">Cancel</v-btn>
+                        <v-btn color="primary" variant="elevated" @click="saveTaskNotes">Save Notes</v-btn>
                     </v-card-actions>
                 </v-card>
             </v-dialog>

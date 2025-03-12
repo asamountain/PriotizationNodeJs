@@ -121,25 +121,11 @@ const setupSocket = (io) => {
 
     socket.on("updateSubtask", async ({ subtask }) => {
       try {
-        console.log("SOCKET: Received updateSubtask request:");
-        console.log("SOCKET: Subtask ID:", subtask.id);
-        console.log("SOCKET: Subtask link:", subtask.link);
-        console.log("SOCKET: Subtask link type:", typeof subtask.link);
-        
+        console.log("Updating subtask:", subtask);
         await database.updateSubtask(subtask);
-        console.log("SOCKET: Subtask updated successfully");
+        console.log("Subtask updated successfully");
 
         const data = await getTaskData();
-        
-        // Check if the link was preserved in the fetched data
-        const updatedSubtask = data.find(t => t.id === subtask.id);
-        if (updatedSubtask) {
-          console.log("SOCKET: Verification - fetched subtask after update:", updatedSubtask);
-          console.log("SOCKET: Verified link in fetched data:", updatedSubtask.link);
-        } else {
-          console.error("SOCKET: Could not find updated subtask in fetched data");
-        }
-        
         io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         console.error("Failed to update subtask:", error);

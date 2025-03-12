@@ -41,7 +41,8 @@ class Database {
         // Add migrations for new columns
         `ALTER TABLE tasks ADD COLUMN due_date TEXT NULL`,
         `ALTER TABLE tasks ADD COLUMN link TEXT NULL`,
-        `ALTER TABLE tasks ADD COLUMN completed_at TEXT NULL`
+        `ALTER TABLE tasks ADD COLUMN completed_at TEXT NULL`,
+        `ALTER TABLE tasks ADD COLUMN notes TEXT NULL`
       ];
       
       this.db.serialize(() => {
@@ -225,11 +226,29 @@ class Database {
     });
   }
 
+  async updateTaskNotes(taskId, notes) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE tasks SET notes = ? WHERE id = ?",
+        [notes, taskId],
+        function (err) {
+          if (err) {
+            console.error("Error updating task notes:", err);
+            reject(err);
+            return;
+          }
+          resolve(this.changes);
+          console.log("Task notes updated:", taskId);
+        }
+      );
+    });
+  }
+
   async editTask(task) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        "UPDATE tasks SET name = ?, importance = ?, urgency = ?, link = ?, due_date = ? WHERE id = ?",
-        [task.name, task.importance, task.urgency, task.link, task.due_date, task.id],
+        "UPDATE tasks SET name = ?, importance = ?, urgency = ?, link = ?, due_date = ?, notes = ? WHERE id = ?",
+        [task.name, task.importance, task.urgency, task.link, task.due_date, task.notes, task.id],
         function (err) {
           if (err) {
             console.error("Error editing task:", err);
@@ -254,6 +273,7 @@ export const deleteTask = (...args) => database.deleteTask(...args);
 export const toggleTaskDone = (...args) => database.toggleTaskDone(...args);
 export const addSubtask = (...args) => database.addSubtask(...args);
 export const updateSubtask = (...args) => database.updateSubtask(...args);
+export const updateTaskNotes = (...args) => database.updateTaskNotes(...args);
 export const editTask = (...args) => database.editTask(...args);
 export const initDatabase = async () => {
   try {

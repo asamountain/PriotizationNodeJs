@@ -110,7 +110,10 @@ window.addEventListener('DOMContentLoaded', () => {
           color: 'primary',
           timeout: 3000
         },
-        socket: null
+        socket: null,
+        showNotesDialog: false,
+        editingNotes: '',
+        currentTask: null,
       };
     },
     computed: {
@@ -371,7 +374,48 @@ window.addEventListener('DOMContentLoaded', () => {
           color,
           timeout
         };
-      }
+      },
+      
+      editTaskNotes(task) {
+        this.currentTask = task;
+        this.editingNotes = task.notes || '';
+        this.showNotesDialog = true;
+      },
+      
+      editSubtaskNotes(subtask) {
+        this.currentTask = subtask;
+        this.editingNotes = subtask.notes || '';
+        this.showNotesDialog = true;
+      },
+      
+      showTaskNotes(task) {
+        this.currentTask = task;
+        this.editingNotes = task.notes || '';
+        this.showNotesDialog = true;
+      },
+      
+      closeNotesDialog() {
+        this.showNotesDialog = false;
+        this.currentTask = null;
+      },
+      
+      saveTaskNotes() {
+        if (!this.currentTask) return;
+        
+        const updatedTask = { ...this.currentTask, notes: this.editingNotes };
+        
+        if (updatedTask.parent_id) {
+          // It's a subtask
+          taskOperations.updateSubtask(updatedTask);
+        } else {
+          // It's a main task
+          taskOperations.editTask(updatedTask);
+        }
+        
+        // Close the dialog
+        this.showNotesDialog = false;
+        this.currentTask = null;
+      },
     },
     mounted() {
       // Initialize socket connection first
