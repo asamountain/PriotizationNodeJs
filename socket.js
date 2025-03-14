@@ -1,4 +1,4 @@
-import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone, editTask } from "./db.js";
+import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone, editTask, updateTaskNotes } from "./db.js";
 import database from "./db.js";
 
 const setupSocket = (io) => {
@@ -142,6 +142,70 @@ const setupSocket = (io) => {
         io.emit("updateTasks", { data: processTaskData(data) });
       } catch (error) {
         console.error("Failed to edit task:", error);
+      }
+    });
+
+    socket.on("updateTaskNotes", async ({ taskId, notes }) => {
+      try {
+        console.log("SOCKET: Received updateTaskNotes request");
+        console.log("SOCKET: Task ID:", taskId);
+        console.log("SOCKET: Notes content:", notes);
+        
+        await updateTaskNotes(taskId, notes);
+        console.log("SOCKET: Notes updated successfully");
+
+        // Send updated data back to all clients
+        const data = await getTaskData();
+        console.log("SOCKET: Sending updated task data to clients");
+        io.emit("updateTasks", { data: processTaskData(data) });
+      } catch (error) {
+        console.error("Failed to update task notes:", error);
+        socket.emit("error", { message: "Failed to update notes" });
+      }
+    });
+
+    socket.on("getTaskDetails", async ({ taskId }) => {
+      try {
+        console.log("Fetching details for task ID:", taskId);
+        
+        // Get the specific task details from the database
+        const task = await new Promise((resolve, reject) => {
+          database.db.get("SELECT * FROM tasks WHERE id = ?", [taskId], (err, row) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve(row);
+          });
+        });
+        
+        if (task) {
+          console.log("Task details retrieved:", task);
+          console.log("Task notes:", task.notes);
+          
+          // Format the task data consistently with other responses
+          const formattedTask = {
+            id: task.id,
+            name: task.name,
+            importance: Number(task.importance) || 0,
+            urgency: Number(task.urgency) || 0,
+            done: task.done === 1 || task.done === true || task.done === "true",
+            created_at: task.created_at,
+            parent_id: task.parent_id,
+            due_date: task.due_date,
+            link: task.link,
+            notes: task.notes,
+            completed_at: task.completed_at
+          };
+          
+          socket.emit("taskDetails", formattedTask);
+        } else {
+          console.error("Task not found:", taskId);
+          socket.emit("taskDetails", null);
+        }
+      } catch (error) {
+        console.error("Error fetching task details:", error);
+        socket.emit("taskDetails", null);
       }
     });
 

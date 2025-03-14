@@ -323,7 +323,8 @@
                                                 
                                                 <!-- Notes preview if exists -->
                                                 <div v-if="task.notes" class="mt-1 text-caption text-truncate" style="max-width: 100%; color: #757575;">
-                                                    {{ task.notes.substring(0, 100) }}{{ task.notes.length > 100 ? '...' : '' }}
+                                                    <v-icon size="x-small" color="info" class="me-1">mdi-note-text</v-icon>
+                                                    {{ task.notes.substring(0, 50) }}{{ task.notes.length > 50 ? '...' : '' }}
                                                 </div>
                                             </v-list-item-subtitle>
                                         </div>
@@ -714,13 +715,15 @@
             </v-dialog>
 
             <!-- Notes Dialog -->
-            <v-dialog v-model="showNotesDialog" max-width="600px">
-                <v-card>
-                    <v-card-title class="text-h5">
-                        {{ currentTask ? 'Notes for: ' + currentTask.name : 'Task Notes' }}
+            <v-dialog v-model="showNotesDialog" max-width="600px" persistent scrollable>
+                <v-card v-if="currentTask" style="min-height: 400px">
+                    <v-card-title class="text-h5 bg-primary text-white">
+                        {{ currentTask.notes ? 'Edit Notes: ' : 'Add Notes: ' }} {{ currentTask.name }}
                     </v-card-title>
-                    <v-card-text>
+                    <v-card-text class="pa-4">
+                        <!-- Key binding forces component to re-render -->
                         <v-textarea
+                            :key="`notes-${noteTaskId}-${Date.now()}`"
                             v-model="editingNotes"
                             label="Task Notes"
                             variant="outlined"
@@ -729,11 +732,19 @@
                             auto-grow
                             placeholder="Add your notes here..."
                         ></v-textarea>
+                        
+                        <!-- Add a debug display to see what's happening -->
+                        <div v-if="currentTask" class="mt-3 text-caption">
+                            Task ID: {{ currentTask.id }} <br>
+                            Note Length: {{ editingNotes ? editingNotes.length : 0 }} characters
+                        </div>
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer></v-spacer>
                         <v-btn color="grey" variant="text" @click="closeNotesDialog">Cancel</v-btn>
-                        <v-btn color="primary" variant="elevated" @click="saveTaskNotes">Save Notes</v-btn>
+                        <v-btn color="primary" variant="elevated" @click="saveTaskNotes">
+                            Save Notes
+                        </v-btn>
                     </v-card-actions>
                 </v-card>
             </v-dialog>

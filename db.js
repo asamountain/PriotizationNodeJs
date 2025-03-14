@@ -227,20 +227,45 @@ class Database {
   }
 
   async updateTaskNotes(taskId, notes) {
+    console.log("DATABASE: Updating notes for task ID:", taskId);
+    console.log("DATABASE: Notes content being saved:", notes);
+    
     return new Promise((resolve, reject) => {
-      this.db.run(
-        "UPDATE tasks SET notes = ? WHERE id = ?",
-        [notes, taskId],
-        function (err) {
-          if (err) {
-            console.error("Error updating task notes:", err);
-            reject(err);
-            return;
-          }
-          resolve(this.changes);
-          console.log("Task notes updated:", taskId);
-        }
-      );
+      if (!this.db) {
+        console.error("Database connection not available");
+        return reject(new Error("Database connection not available"));
+      }
+      
+      try {
+        this.db.run(
+          "UPDATE tasks SET notes = ? WHERE id = ?",
+          [notes, taskId],
+          function(err) {
+            if (err) {
+              console.error("Error updating task notes:", err);
+              reject(err);
+              return;
+            }
+            
+            // Success - resolve with number of rows changed
+            resolve(this.changes);
+            console.log("Task notes updated successfully:", taskId, "Changes:", this.changes);
+            
+            // Verify the update worked by querying the record
+            this.db.get("SELECT * FROM tasks WHERE id = ?", [taskId], (err, row) => {
+              if (err) {
+                console.error("Error verifying notes update:", err);
+                return;
+              }
+              console.log("Task after notes update:", row);
+              console.log("Verified notes value in database:", row?.notes);
+            });
+          }.bind(this) // Important: bind this to access db in callback
+        );
+      } catch (error) {
+        console.error("Exception during notes update:", error);
+        reject(error);
+      }
     });
   }
 

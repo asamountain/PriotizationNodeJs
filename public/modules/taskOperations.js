@@ -293,4 +293,48 @@ export class TaskOperations {
       setTimeout(() => document.body.removeChild(notification), 300);
     }, 3000);
   }
+
+  updateTaskNotes(taskId, notes) {
+    console.log('TaskOperations.updateTaskNotes called for task:', taskId);
+    console.log('Notes content to save:', notes);
+    
+    // Get socket safely
+    const socket = window.app?.socket || 
+                  (typeof io !== 'undefined' ? io(window.location.origin) : null);
+    
+    if (!socket) {
+      console.error('No socket connection available');
+      return;
+    }
+    
+    // First check if the task exists and has current notes
+    socket.emit('getTaskDetails', { taskId });
+    socket.once('taskDetails', (taskData) => {
+      console.log('Current task data before update:', taskData);
+      console.log('Current notes value:', taskData?.notes);
+      
+      // Now save the new notes
+      socket.emit('updateTaskNotes', { taskId, notes });
+      
+      // Verify notes were saved
+      socket.once('updateTasks', () => {
+        console.log('Notes update completed');
+        
+        // Double-check the notes were saved correctly
+        setTimeout(() => {
+          socket.emit('getTaskDetails', { taskId });
+          socket.once('taskDetails', (updatedTask) => {
+            console.log('Task data after update:', updatedTask);
+            console.log('New notes value:', updatedTask?.notes);
+            
+            if (updatedTask?.notes !== notes) {
+              console.error('Notes mismatch! Expected:', notes, 'Got:', updatedTask?.notes);
+            } else {
+              console.log('Notes verified successfully');
+            }
+          });
+        }, 500);
+      });
+    });
+  }
 } 

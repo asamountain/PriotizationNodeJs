@@ -79,7 +79,7 @@ window.addEventListener('DOMContentLoaded', () => {
         },
         showSubtaskModal: false,
         parentId: null,
-        showCompletedSubtasks: true,
+        showCompletedSubtasks: false,
         taskSectionOpen: {
           active: true,
           completed: false
@@ -114,6 +114,7 @@ window.addEventListener('DOMContentLoaded', () => {
         showNotesDialog: false,
         editingNotes: '',
         currentTask: null,
+        noteTaskId: null,
       };
     },
     computed: {
@@ -377,9 +378,40 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       editTaskNotes(task) {
-        this.currentTask = task;
-        this.editingNotes = task.notes || '';
-        this.showNotesDialog = true;
+        console.log("Opening notes for task:", task.id, task.name);
+        
+        // Force fetch the latest task data from the server to ensure we have latest notes
+        const socket = this.socket || window.socket;
+        if (socket) {
+          socket.emit('getTaskDetails', { taskId: task.id });
+          
+          // Set up a one-time listener for the response
+          socket.once('taskDetails', (taskData) => {
+            console.log("Received task details:", taskData);
+            if (taskData && taskData.id === task.id) {
+              this.currentTask = taskData;
+              this.editingNotes = taskData.notes || '';
+              this.noteTaskId = task.id;
+              
+              console.log("Setting notes to:", this.editingNotes);
+              this.showNotesDialog = true;
+            }
+          });
+        } else {
+          // Fallback to using local data if socket isn't available
+          const latestTask = this.tasks.find(t => t.id === task.id);
+          if (latestTask) {
+            console.log("Using local task data:", latestTask);
+            this.currentTask = { ...latestTask };
+            this.editingNotes = latestTask.notes || '';
+            this.noteTaskId = task.id;
+            
+            console.log("Setting notes to:", this.editingNotes);
+            this.showNotesDialog = true;
+          } else {
+            console.error("Task not found in local data");
+          }
+        }
       },
       
       editSubtaskNotes(subtask) {
@@ -395,26 +427,44 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       closeNotesDialog() {
+        console.log("Closing notes dialog");
         this.showNotesDialog = false;
         this.currentTask = null;
+        this.editingNotes = '';
+        this.noteTaskId = null;
       },
       
       saveTaskNotes() {
-        if (!this.currentTask) return;
-        
-        const updatedTask = { ...this.currentTask, notes: this.editingNotes };
-        
-        if (updatedTask.parent_id) {
-          // It's a subtask
-          taskOperations.updateSubtask(updatedTask);
-        } else {
-          // It's a main task
-          taskOperations.editTask(updatedTask);
+        console.log("Saving notes for task:", this.currentTask?.id);
+        if (!this.currentTask) {
+          console.error("No current task selected");
+          return;
         }
         
-        // Close the dialog
+        console.log("Notes content:", this.editingNotes);
+        
+        // Store notes in database through socket
+        taskOperations.updateTaskNotes(this.currentTask.id, this.editingNotes);
+        
+        // Update notes in local data using Vue 3 reactivity - fixed
+        const taskIndex = this.tasks.findIndex(t => t.id === this.currentTask.id);
+        if (taskIndex >= 0) {
+          console.log("Updating local task data with new notes");
+          // Vue 3 way - directly modify the array
+          this.tasks[taskIndex] = { 
+            ...this.tasks[taskIndex], 
+            notes: this.editingNotes 
+          };
+        }
+        
+        // Show notification
+        this.showNotification(`Notes ${this.editingNotes ? 'saved' : 'cleared'} for task: ${this.currentTask.name}`, 'success');
+        
+        // Close dialog
         this.showNotesDialog = false;
         this.currentTask = null;
+        this.editingNotes = '';
+        this.noteTaskId = null;
       },
     },
     mounted() {
