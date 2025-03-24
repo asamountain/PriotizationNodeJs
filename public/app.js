@@ -113,6 +113,12 @@ window.addEventListener('DOMContentLoaded', () => {
         editingNotes: '',
         currentTask: null,
         noteTaskId: null,
+        newTaskName: '',
+        newTaskImportance: 5,
+        newTaskUrgency: 5,
+        newTaskDueDate: null,
+        newTaskNotes: '',
+        selectedParentId: null,
       };
     },
     computed: {
@@ -462,6 +468,19 @@ window.addEventListener('DOMContentLoaded', () => {
         this.noteTaskId = null;
       },
       
+      showAddTaskDialog() {
+        // Reset form fields
+        this.newTaskName = '';
+        this.newTaskImportance = 5;
+        this.newTaskUrgency = 5;
+        this.newTaskDueDate = null;
+        this.newTaskNotes = '';
+        this.selectedParentId = null;
+        
+        // Show dialog - activate the appropriate UI component
+        document.querySelector('#task-form-card').scrollIntoView({ behavior: 'smooth' });
+      },
+      
       saveTaskNotes() {
         console.log("Saving notes for task:", this.currentTask?.id);
         if (!this.currentTask) {
@@ -546,27 +565,69 @@ window.addEventListener('DOMContentLoaded', () => {
       handleInitialData(data) {
         console.log('Received initial data:', data);
         if (data && data.data) {
-          const transformedTasks = data.data.map(task => ({
-            id: task._id,
-            name: task.title,
-            importance: task.importance || 5,
-            urgency: task.urgency || 5,
-            done: task.completed || false,
-            parent_id: task.parentId || null,
-            created_at: task.createdAt,
-            completed_at: task.completedAt,
-            due_date: task.dueDate ? new Date(task.dueDate) : null,
-            notes: task.notes || '',
-            link: task.link || ''
-          }));
+          // First pass - collect all originalIds to MongoIDs mapping
+          const idMapping = new Map();
+          data.data.forEach(task => {
+            // Store mapping from originalId to MongoDB _id
+            if (task.originalId) {
+              idMapping.set(task.originalId, String(task._id));
+            }
+          });
+          
+          console.log('ID mapping created:', Array.from(idMapping.entries()));
+          
+          // Second pass - transform tasks with correct ID references
+          const transformedTasks = data.data.map(task => {
+            // Convert MongoDB _id to string to ensure consistent comparison
+            const taskId = String(task._id);
+            
+            // Figure out parent_id using originalId -> _id mapping
+            let parentId = null;
+            if (task.parentId) {
+              // First check if parentId is a direct MongoDB ID
+              if (data.data.some(t => String(t._id) === task.parentId)) {
+                parentId = task.parentId;
+              } 
+              // Otherwise, treat it as an originalId and look up the corresponding MongoDB ID
+              else if (idMapping.has(task.parentId)) {
+                parentId = idMapping.get(task.parentId);
+                console.log(`Mapped original parentId '${task.parentId}' to MongoDB ID '${parentId}' for task '${task.title}'`);
+              } else {
+                console.warn(`Cannot find parent with ID '${task.parentId}' for task '${task.title}'`);
+              }
+            }
+            
+            return {
+              id: taskId,
+              original_id: task.originalId || null,
+              name: task.title,
+              importance: task.importance || 5,
+              urgency: task.urgency || 5,
+              done: task.completed || false,
+              parent_id: parentId,
+              created_at: task.createdAt,
+              completed_at: task.completedAt,
+              due_date: task.dueDate ? new Date(task.dueDate) : null,
+              notes: task.notes || '',
+              link: task.link || ''
+            };
+          });
           
           this.tasks = transformedTasks;
           console.log('Tasks updated:', this.tasks);
           
           // Additional debugging information
-          console.log('Task activation status:');
+          console.log('Task parentId status:');
           transformedTasks.forEach(task => {
-            console.log(`Task ${task.id} (${task.name}): done=${task.done}, parent_id=${task.parent_id}`);
+            console.log(`Task ${task.id} (${task.name}): done=${task.done}, parent_id=${task.parent_id || 'none'}, original_id=${task.original_id || 'none'}`);
+          });
+          
+          // Check parent-child relationships
+          const childTasks = transformedTasks.filter(t => t.parent_id);
+          console.log(`Found ${childTasks.length} child tasks with parent references`);
+          childTasks.forEach(child => {
+            const parent = transformedTasks.find(t => t.id === child.parent_id);
+            console.log(`Child: ${child.name}, Parent: ${parent ? parent.name : 'NOT FOUND'}`);
           });
           
           // Check active tasks immediately after setting
@@ -587,29 +648,74 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       buildTaskHierarchy(tasks) {
+        console.log('Building task hierarchy from', tasks.length, 'tasks');
+        
         // Create a map of tasks by their IDs
         const taskMap = new Map();
+        
+        // Also create a map by original_id for legacy reference if needed
+        const originalIdMap = new Map();
+        
         tasks.forEach(task => {
-          taskMap.set(task.id || task._id, {
+          // Use consistent ID field and ensure it's a string
+          const taskId = String(task.id || task._id);
+          const taskWithChildren = {
             ...task,
-            id: task.id || task._id, // Ensure consistent ID field
+            id: taskId, // Ensure consistent ID field
             children: []
-          });
+          };
+          
+          taskMap.set(taskId, taskWithChildren);
+          
+          // If task has an original_id, also map it
+          if (task.original_id) {
+            originalIdMap.set(task.original_id, taskWithChildren);
+          }
+          
+          // Debug info
+          console.log(`Task ${taskId} (${task.name}): parent_id=${task.parent_id || 'none'}, original_id=${task.original_id || 'none'}`);
         });
+
+        console.log('ID mapping size:', taskMap.size);
+        console.log('Original ID mapping size:', originalIdMap.size);
 
         // Build the hierarchy
         const rootTasks = [];
         taskMap.forEach(task => {
-          if (task.parent_id || task.parentId) {
-            const parentId = task.parent_id || task.parentId;
-            const parent = taskMap.get(parentId);
+          // Check if task has a parent
+          if (task.parent_id) {
+            // Convert parent_id to string for consistent comparison
+            const parentId = String(task.parent_id);
+            console.log(`Looking for parent ${parentId} for task ${task.id} (${task.name})`);
+            
+            // First try to find parent by direct MongoDB ID
+            let parent = taskMap.get(parentId);
+            
+            // If not found and we have original IDs, try using those
+            if (!parent && originalIdMap.has(parentId)) {
+              parent = originalIdMap.get(parentId);
+              console.log(`Found parent via original_id mapping for ${task.name}`);
+            }
+            
             if (parent) {
+              console.log(`Found parent: ${parent.name} for task: ${task.name}`);
               parent.children.push(task);
             } else {
+              console.warn(`Parent not found for task ${task.id} (${task.name}), treating as root`);
               rootTasks.push(task); // If parent not found, treat as root
             }
           } else {
+            console.log(`Task ${task.id} (${task.name}) is a root task`);
             rootTasks.push(task);
+          }
+        });
+
+        console.log('Hierarchy built:', rootTasks.length, 'root tasks');
+        console.log('Root tasks:', rootTasks.map(t => t.name));
+        rootTasks.forEach(task => {
+          if (task.children && task.children.length) {
+            console.log(`Task ${task.name} has ${task.children.length} children:`, 
+              task.children.map(c => c.name).join(', '));
           }
         });
 
