@@ -119,6 +119,8 @@ window.addEventListener('DOMContentLoaded', () => {
         newTaskDueDate: null,
         newTaskNotes: '',
         selectedParentId: null,
+        draggedTaskId: null,
+        draggedElement: null,
       };
     },
     computed: {
@@ -203,7 +205,8 @@ window.addEventListener('DOMContentLoaded', () => {
           this.socket.emit('updateTask', {
             taskId: task.id,
             updates: {
-              completed: !task.done
+              completed: !task.done,
+              userId: "default-user-id" // Add default userId
             }
           }, (response) => {
             if (response && response.success) {
@@ -327,7 +330,8 @@ window.addEventListener('DOMContentLoaded', () => {
             completed: false,
             parentId: this.parentId,
             link: this.newSubtask.link || '',
-            dueDate: this.newSubtask.due_date || null
+            dueDate: this.newSubtask.due_date || null,
+            userId: "default-user-id" // Add default userId to satisfy MongoDB validation
           };
           
           // Ensure link has proper format
@@ -430,7 +434,8 @@ window.addEventListener('DOMContentLoaded', () => {
             urgency: this.editingSubtask.urgency,
             link: this.editingSubtask.link || '',
             dueDate: this.editingSubtask.due_date,
-            parentId: this.editingSubtask.parent_id
+            parentId: this.editingSubtask.parent_id,
+            userId: "default-user-id"
           };
           
           this.socket.emit('updateTask', {
@@ -513,7 +518,8 @@ window.addEventListener('DOMContentLoaded', () => {
             importance: this.editingTask.importance,
             urgency: this.editingTask.urgency,
             link: this.editingTask.link || '',
-            dueDate: this.editingTask.due_date
+            dueDate: this.editingTask.due_date,
+            userId: "default-user-id"
           };
           
           this.socket.emit('updateTask', {
@@ -731,7 +737,8 @@ window.addEventListener('DOMContentLoaded', () => {
           this.socket.emit('updateTask', {
             taskId: this.currentTask.id,
             updates: {
-              notes: this.editingNotes
+              notes: this.editingNotes,
+              userId: "default-user-id" // Add default userId
             }
           }, (response) => {
             if (response && response.success) {
@@ -992,7 +999,226 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         return rootTasks;
-      }
+      },
+      
+      // Drag and drop task handling methods
+      dragStart(event, task) {
+        event.dataTransfer.setData('text/plain', task.id);
+        this.draggedTaskId = task.id;
+        console.log('Started dragging task:', task.name);
+        
+        // Add visual class to the dragged element
+        event.target.classList.add('dragging');
+        
+        // Store a reference to the element for later cleanup
+        this.draggedElement = event.target;
+      },
+      
+      dragEnd(event) {
+        // Clean up any drag-related classes
+        if (this.draggedElement) {
+          this.draggedElement.classList.remove('dragging');
+          this.draggedElement = null;
+        }
+        
+        // Reset draggedTaskId
+        this.draggedTaskId = null;
+        
+        // Remove drop target classes from all elements
+        document.querySelectorAll('.drop-target, .drop-target-root').forEach(el => {
+          el.classList.remove('drop-target', 'drop-target-root');
+        });
+      },
+      
+      dragEnter(event, targetTask) {
+        // Don't allow dropping on itself
+        if (targetTask.id === this.draggedTaskId) {
+          return;
+        }
+        
+        // Add visual indication of the drop target
+        event.currentTarget.classList.add('drop-target');
+        console.log('Drag entered target:', targetTask.name);
+      },
+      
+      dragLeave(event) {
+        // Remove visual indication when leaving the drop target
+        event.currentTarget.classList.remove('drop-target');
+      },
+      
+      dragEnterRoot(event) {
+        // Highlight the root drop area
+        event.currentTarget.classList.add('drop-target-root');
+      },
+      
+      dragLeaveRoot(event) {
+        // Remove highlight from root drop area
+        event.currentTarget.classList.remove('drop-target-root');
+      },
+      
+      dropOnRoot(event) {
+        event.preventDefault();
+        // Remove drop target highlighting
+        event.currentTarget.classList.remove('drop-target-root');
+        
+        // Get the ID of the dragged task
+        const draggedTaskId = event.dataTransfer.getData('text/plain');
+        if (!draggedTaskId) return;
+        
+        console.log(`Dropping task ${draggedTaskId} onto root`);
+        
+        // Find the dragged task
+        const draggedTask = this.tasks.find(t => t.id === draggedTaskId);
+        if (!draggedTask) {
+          console.error('Dragged task not found:', draggedTaskId);
+          return;
+        }
+        
+        // Only do something if the task has a parent (is a subtask)
+        if (draggedTask.parent_id) {
+          this.moveTaskToRoot(draggedTask);
+        } else {
+          console.log('Task is already a root task');
+        }
+        
+        // Clear drag state after drop
+        this.dragEnd(event);
+      },
+      
+      dropOnTask(event, targetTask) {
+        event.preventDefault();
+        // Remove drop target highlighting
+        event.currentTarget.classList.remove('drop-target');
+        
+        // Get the ID of the dragged task
+        const draggedTaskId = event.dataTransfer.getData('text/plain');
+        if (!draggedTaskId) return;
+        
+        console.log(`Dropping task ${draggedTaskId} onto task ${targetTask.id}`);
+        
+        // Find the dragged task
+        const draggedTask = this.tasks.find(t => t.id === draggedTaskId);
+        if (!draggedTask) {
+          console.error('Dragged task not found:', draggedTaskId);
+          return;
+        }
+        
+        // Don't allow dropping on itself
+        if (draggedTaskId === targetTask.id) {
+          console.warn('Cannot drop task onto itself');
+          return;
+        }
+        
+        // Don't allow creating circular parent-child relationships
+        if (this.wouldCreateCircularRelationship(draggedTask, targetTask)) {
+          console.warn('Cannot create circular relationship');
+          this.showNotification('Cannot create circular parent-child relationship', 'error');
+          return;
+        }
+        
+        // Determine if we're moving a task to be a child of another
+        if (draggedTask.parent_id === targetTask.id) {
+          // Already a child of the target
+          console.log('Task is already a child of the target');
+        } else {
+          // Moving to be a child of the target
+          this.moveTaskToNewParent(draggedTask, targetTask);
+        }
+        
+        // Clear drag state after drop
+        this.dragEnd(event);
+      },
+      
+      moveTaskToNewParent(draggedTask, targetTask) {
+        console.log(`Moving task ${draggedTask.id} to be a child of ${targetTask.id}`);
+        
+        // Find the task in the tasks array
+        const task = this.tasks.find(t => t.id === draggedTask.id);
+        if (task) {
+          task.parent_id = targetTask.id;
+          
+          // Emit update to server if socket connection exists
+          if (this.socket) {
+            this.socket.emit('updateTaskParent', {
+              taskId: draggedTask.id,
+              newParentId: targetTask.id,
+              userId: "default-user-id"
+            });
+            
+            // Show notification
+            this.showNotification(
+              `Moved "${draggedTask.name}" to be a subtask of "${targetTask.name}"`,
+              'success',
+              '↪️'
+            );
+          } else {
+            this.showNotification('Cannot move task without connection to server', 'error');
+          }
+          
+          // Force a refresh of the computed properties with a small delay
+          setTimeout(() => {
+            this.refreshTaskList();
+          }, 50);
+        }
+      },
+      
+      moveTaskToRoot(draggedTask) {
+        console.log(`Moving task ${draggedTask.id} to root level`);
+        
+        // Find the task in the tasks array
+        const task = this.tasks.find(t => t.id === draggedTask.id);
+        if (task) {
+          task.parent_id = null;
+          
+          // Emit update to server if socket connection exists
+          if (this.socket) {
+            this.socket.emit('updateTaskParent', {
+              taskId: draggedTask.id,
+              newParentId: null,
+              userId: "default-user-id"
+            });
+            
+            // Show notification
+            this.showNotification(
+              `Moved "${draggedTask.name}" to main tasks`,
+              'success',
+              '⬆️'
+            );
+          } else {
+            this.showNotification('Cannot move task without connection to server', 'error');
+          }
+          
+          // Force a refresh of the computed properties with a small delay
+          setTimeout(() => {
+            this.refreshTaskList();
+          }, 50);
+        }
+      },
+      
+      wouldCreateCircularRelationship(draggedTask, targetTask) {
+        // Check if the target task is a descendant of the dragged task
+        return this.isTaskDescendantOf(targetTask, draggedTask);
+      },
+      
+      isTaskDescendantOf(potentialDescendant, ancestor) {
+        // Base case: if the potential descendant is the ancestor itself
+        if (potentialDescendant.id === ancestor.id) {
+          return true;
+        }
+        
+        // Get the parent of the potential descendant
+        if (potentialDescendant.parent_id) {
+          const parent = this.tasks.find(t => t.id === potentialDescendant.parent_id);
+          
+          // If parent found, continue checking up the tree
+          if (parent) {
+            return this.isTaskDescendantOf(parent, ancestor);
+          }
+        }
+        
+        // If we reach this point, no circular relationship was found
+        return false;
+      },
     },
     mounted() {
       // Initialize socket connection

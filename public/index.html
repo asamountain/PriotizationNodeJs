@@ -148,6 +148,67 @@
       .completed-subtask {
         opacity: 0.75;
       }
+      
+      /* Drag and drop styling */
+      .dragging {
+        opacity: 0.6;
+        transform: scale(0.95);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+      
+      .drop-target {
+        background-color: rgba(var(--v-theme-primary), 0.1) !important;
+        border: 2px dashed rgba(var(--v-theme-primary), 0.7) !important;
+        transform: scale(1.02);
+        position: relative;
+        z-index: 10;
+        transition: all 0.2s ease;
+      }
+      
+      .drop-target-root {
+        background-color: rgba(var(--v-theme-primary), 0.1) !important;
+        border: 2px dashed rgba(var(--v-theme-primary), 0.7) !important;
+        transform: scale(1.02);
+        position: relative;
+        z-index: 10;
+        transition: all 0.2s ease;
+      }
+      
+      /* Visual cue that an item is draggable */
+      .task:hover::before,
+      .subtask:hover::before {
+        content: '☰';
+        position: absolute;
+        left: -15px;
+        color: rgba(var(--v-theme-on-surface), 0.4);
+        cursor: move;
+        font-size: 14px;
+        opacity: 0.6;
+      }
+      
+      .task, .subtask {
+        position: relative;
+        transition: all 0.2s ease;
+      }
+      
+      .task:hover, .subtask:hover {
+        background-color: rgba(var(--v-theme-surface-variant), 0.1);
+      }
+      
+      .drop-guide {
+        display: none;
+        position: absolute;
+        bottom: -10px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: rgba(var(--v-theme-primary), 0.8);
+        z-index: 20;
+      }
+      
+      .drop-target .drop-guide {
+        display: block;
+      }
     </style>
 </head>
 <body>
@@ -256,6 +317,10 @@
                                 </v-icon>
                             </v-btn>
                         </v-card-title>
+                        <v-card-subtitle class="text-caption text-medium-emphasis">
+                            <v-icon size="x-small" class="mr-1">mdi-drag</v-icon>
+                            Drag and drop to rearrange tasks and subtasks
+                        </v-card-subtitle>
                         <v-card-text>
                             <v-list v-if="hierarchicalTasks.length > 0">
                                 <template v-for="task in hierarchicalTasks.filter(t => !t.done)" :key="task.id">
@@ -265,6 +330,13 @@
                                         @click="selectTask(task)"
                                         :data-task-id="task.id" 
                                         class="task"
+                                        draggable="true"
+                                        @dragstart="dragStart($event, task)"
+                                        @dragend="dragEnd($event)"
+                                        @dragover.prevent
+                                        @dragenter.prevent="dragEnter($event, task)"
+                                        @dragleave="dragLeave($event)"
+                                        @drop="dropOnTask($event, task)"
                                     >
                                         <template v-slot:prepend>
                                             <v-checkbox 
@@ -413,6 +485,13 @@
                                             :class="{'d-none': subtask.done && !showCompletedSubtasks}"
                                             :data-subtask-id="subtask.id"
                                             class="subtask py-1"
+                                            draggable="true"
+                                            @dragstart="dragStart($event, subtask)"
+                                            @dragend="dragEnd($event)"
+                                            @dragover.prevent
+                                            @dragenter.prevent="dragEnter($event, subtask)"
+                                            @dragleave="dragLeave($event)"
+                                            @drop="dropOnTask($event, subtask)"
                                         >
                                             <template v-slot:prepend>
                                                 <v-icon size="small" color="primary" class="mr-2">mdi-subdirectory-arrow-right</v-icon>
@@ -620,6 +699,19 @@
                             </div>
                         </v-expand-transition>
                     </v-card>
+
+                    <!-- Empty drop area -->
+                    <v-sheet
+                        id="empty-drop-area"
+                        class="mt-4 pa-6 text-center bg-grey-lighten-4 rounded"
+                        @dragover.prevent
+                        @dragenter.prevent="dragEnterRoot($event)"
+                        @dragleave="dragLeaveRoot($event)"
+                        @drop="dropOnRoot($event)"
+                    >
+                        <v-icon size="large" class="mb-2">mdi-arrow-down-circle-outline</v-icon>
+                        <div>Drop subtasks here to convert them into main tasks</div>
+                    </v-sheet>
                 </v-container>
             </v-main>
 
@@ -944,5 +1036,10 @@
       props: ['task']
     });
     </script>
+
+    <v-card-subtitle class="text-caption text-medium-emphasis">
+        <v-icon size="x-small" class="mr-1">mdi-drag</v-icon>
+        Drag and drop to rearrange tasks and subtasks
+    </v-card-subtitle>
 </body>
 </html>

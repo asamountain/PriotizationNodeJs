@@ -46,6 +46,11 @@ const setupSocket = (server) => {
     // Handle new task creation
     socket.on('addTask', async (taskData) => {
       try {
+        // Make sure userId is included
+        if (!taskData.userId) {
+          taskData.userId = "default-user-id"; // Add default userId if missing
+        }
+        
         const newTask = new Task({
           ...taskData,
           createdAt: new Date()
@@ -65,6 +70,16 @@ const setupSocket = (server) => {
     // Handle task updates
     socket.on('updateTask', async ({ taskId, updates }) => {
       try {
+        // Make sure userId is preserved when updating
+        if (!updates.userId) {
+          const existingTask = await Task.findById(taskId);
+          if (existingTask) {
+            updates.userId = existingTask.userId;
+          } else {
+            updates.userId = "default-user-id";
+          }
+        }
+        
         const updatedTask = await Task.findByIdAndUpdate(
           taskId,
           { ...updates, updatedAt: new Date() },
