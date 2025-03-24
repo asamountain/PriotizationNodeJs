@@ -196,12 +196,88 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       toggleTaskDone(task) {
-        taskOperations.toggleDone(task.id);
+        console.log(`Toggling task completion status: ${task.id} (${task.name}), current status: ${task.done}`);
+        
+        // If we have a direct socket connection
+        if (this.socket) {
+          this.socket.emit('updateTask', {
+            taskId: task.id,
+            updates: {
+              completed: !task.done
+            }
+          }, (response) => {
+            if (response && response.success) {
+              // Update the local task object
+              const taskIndex = this.tasks.findIndex(t => t.id === task.id);
+              if (taskIndex !== -1) {
+                // Toggle the done property
+                this.tasks[taskIndex].done = !this.tasks[taskIndex].done;
+                
+                // Update completed_at timestamp
+                if (this.tasks[taskIndex].done) {
+                  this.tasks[taskIndex].completed_at = new Date().toISOString();
+                } else {
+                  this.tasks[taskIndex].completed_at = null;
+                }
+                
+                // Show notification
+                this.showNotification(
+                  `Task ${this.tasks[taskIndex].done ? 'completed' : 'reopened'}: ${task.name}`,
+                  this.tasks[taskIndex].done ? 'success' : 'info'
+                );
+                
+                // Force a UI refresh to reflect changes in computed properties
+                this.refreshTaskList();
+              }
+            } else {
+              console.error('Failed to update task completion status');
+              this.showNotification('Failed to update task status', 'error');
+            }
+          });
+        } else {
+          // Fallback to taskOperations if socket isn't available
+          taskOperations.toggleDone(task.id);
+        }
       },
       
       deleteTask(taskId) {
         if (confirm('Are you sure you want to delete this task?')) {
-          taskOperations.deleteTask(taskId);
+          console.log(`Deleting task with ID: ${taskId}`);
+          
+          // Check if we have a socket connection
+          if (this.socket) {
+            // Use the socket connection to delete the task on the server
+            this.socket.emit('deleteTask', taskId, (response) => {
+              if (response && response.success) {
+                console.log('Task successfully deleted on server');
+                // Remove the task from local array
+                const taskIndex = this.tasks.findIndex(t => t.id === taskId);
+                if (taskIndex !== -1) {
+                  this.tasks.splice(taskIndex, 1);
+                  
+                  // Also check for any children tasks and remove them
+                  const childTasks = this.tasks.filter(t => t.parent_id === taskId);
+                  if (childTasks.length > 0) {
+                    console.log(`Removing ${childTasks.length} child tasks of deleted parent`);
+                    childTasks.forEach(child => {
+                      const childIndex = this.tasks.findIndex(t => t.id === child.id);
+                      if (childIndex !== -1) {
+                        this.tasks.splice(childIndex, 1);
+                      }
+                    });
+                  }
+                  
+                  this.showNotification('Task deleted successfully', 'success');
+                }
+              } else {
+                console.error('Failed to delete task on server');
+                this.showNotification('Failed to delete task', 'error');
+              }
+            });
+          } else {
+            // Fallback to taskOperations if socket isn't available
+            taskOperations.deleteTask(taskId);
+          }
         }
       },
       
@@ -219,6 +295,7 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       showAddSubtaskForm(taskId) {
+        console.log(`Opening add subtask form for parent task: ${taskId}`);
         this.parentId = taskId;
         this.newSubtask = {
           name: '',
@@ -238,7 +315,64 @@ window.addEventListener('DOMContentLoaded', () => {
       addSubtask() {
         if (!this.newSubtask.name || !this.parentId) return;
         
-        taskOperations.addSubtask(this.newSubtask, this.parentId);
+        console.log(`Adding subtask to parent: ${this.parentId}`);
+        
+        // If we have a direct socket connection
+        if (this.socket) {
+          // Format the subtask data for MongoDB
+          const subtaskData = {
+            title: this.newSubtask.name,
+            importance: this.newSubtask.importance || 5,
+            urgency: this.newSubtask.urgency || 5,
+            completed: false,
+            parentId: this.parentId,
+            link: this.newSubtask.link || '',
+            dueDate: this.newSubtask.due_date || null
+          };
+          
+          // Ensure link has proper format
+          if (subtaskData.link && typeof subtaskData.link === 'string' && 
+              !/^https?:\/\//i.test(subtaskData.link)) {
+            subtaskData.link = 'http://' + subtaskData.link;
+          }
+          
+          console.log('Sending subtask data to server:', subtaskData);
+          
+          this.socket.emit('addTask', subtaskData, (response) => {
+            if (response && response.success) {
+              console.log('Subtask added successfully:', response.task);
+              
+              // Transform the response to match frontend structure
+              const newSubtask = {
+                id: response.task._id,
+                name: response.task.title,
+                importance: response.task.importance,
+                urgency: response.task.urgency,
+                done: response.task.completed || false,
+                parent_id: response.task.parentId,
+                created_at: response.task.createdAt,
+                completed_at: response.task.completedAt,
+                due_date: response.task.dueDate ? new Date(response.task.dueDate) : null,
+                notes: response.task.notes || '',
+                link: response.task.link || ''
+              };
+              
+              // Add to tasks array
+              this.tasks.push(newSubtask);
+              
+              // Force a refresh to update hierarchy
+              this.refreshTaskList();
+              
+              this.showNotification(`Subtask added: ${newSubtask.name}`, 'success');
+            } else {
+              console.error('Failed to add subtask');
+              this.showNotification('Failed to add subtask', 'error');
+            }
+          });
+        } else {
+          // Fallback to taskOperations
+          taskOperations.addSubtask(this.newSubtask, this.parentId);
+        }
         
         this.showSubtaskModal = false;
         this.parentId = null;
@@ -260,31 +394,85 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       editSubtask(subtask) {
-        this.editingSubtask = { ...subtask };
-        this.possibleParents = this.activeTasks;
+        console.log(`Editing subtask: ${subtask.id} (${subtask.name})`);
+        this.editingSubtask = { 
+          ...subtask,
+          // Ensure date is properly formatted for input
+          due_date: subtask.due_date ? new Date(subtask.due_date) : null
+        };
+        // Load parent tasks for the dropdown
+        this.possibleParents = this.tasks.filter(task => !task.parent_id && task.id !== subtask.id);
         this.showEditForm = true;
       },
       
       saveSubtaskEdit() {
         if (!this.editingSubtask.name) return;
         
-        console.log("UI: Saving subtask edit:");
-        console.log("UI: Subtask ID:", this.editingSubtask.id);
-        console.log("UI: Subtask link before saving:", this.editingSubtask.link);
+        console.log("Saving subtask edit:");
+        console.log("Subtask ID:", this.editingSubtask.id);
+        console.log("Subtask link before saving:", this.editingSubtask.link);
         
         // Ensure link is properly formatted
         if (this.editingSubtask.link && typeof this.editingSubtask.link === 'string') {
           // Add http:// prefix if missing
           if (!/^https?:\/\//i.test(this.editingSubtask.link)) {
             this.editingSubtask.link = 'http://' + this.editingSubtask.link;
-            console.log("UI: Added http:// prefix to link:", this.editingSubtask.link);
+            console.log("Added http:// prefix to link:", this.editingSubtask.link);
           }
         }
         
-        console.log("UI: Final subtask link value being sent:", this.editingSubtask.link);
-        taskOperations.updateSubtask(this.editingSubtask);
-        
-        this.showNotification("Saving subtask with link: " + (this.editingSubtask.link || "none"), "info");
+        // If we have a direct socket connection
+        if (this.socket) {
+          // Create the update object - mapping to MongoDB fields
+          const updates = {
+            title: this.editingSubtask.name,
+            importance: this.editingSubtask.importance,
+            urgency: this.editingSubtask.urgency,
+            link: this.editingSubtask.link || '',
+            dueDate: this.editingSubtask.due_date,
+            parentId: this.editingSubtask.parent_id
+          };
+          
+          this.socket.emit('updateTask', {
+            taskId: this.editingSubtask.id,
+            updates: updates
+          }, (response) => {
+            if (response && response.success) {
+              // Update local subtask
+              const subtaskIndex = this.tasks.findIndex(t => t.id === this.editingSubtask.id);
+              if (subtaskIndex !== -1) {
+                // Check if parent changed
+                const oldParentId = this.tasks[subtaskIndex].parent_id;
+                const newParentId = this.editingSubtask.parent_id;
+                
+                this.tasks[subtaskIndex] = {
+                  ...this.tasks[subtaskIndex],
+                  name: this.editingSubtask.name,
+                  importance: this.editingSubtask.importance,
+                  urgency: this.editingSubtask.urgency,
+                  link: this.editingSubtask.link,
+                  due_date: this.editingSubtask.due_date,
+                  parent_id: this.editingSubtask.parent_id
+                };
+                
+                // Force a refresh to update hierarchy if parent changed
+                if (oldParentId !== newParentId) {
+                  this.refreshTaskList();
+                }
+                
+                this.showNotification(`Subtask updated: ${this.editingSubtask.name}`, 'success');
+              }
+            } else {
+              console.error('Failed to update subtask');
+              this.showNotification('Failed to update subtask', 'error');
+            }
+          });
+        } else {
+          // Fallback to taskOperations
+          console.log("Final subtask link value being sent:", this.editingSubtask.link);
+          taskOperations.updateSubtask(this.editingSubtask);
+          this.showNotification("Saving subtask with link: " + (this.editingSubtask.link || "none"), "info");
+        }
         
         this.showEditForm = false;
         this.editingSubtask = {
@@ -303,14 +491,59 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       editTask(task) {
-        this.editingTask = { ...task };
+        console.log(`Editing task: ${task.id} (${task.name})`);
+        this.editingTask = { 
+          ...task,
+          // Ensure date is properly formatted for form input
+          due_date: task.due_date ? new Date(task.due_date) : null
+        };
         this.showTaskEditForm = true;
       },
       
       saveTaskEdit() {
         if (!this.editingTask.name) return;
         
-        taskOperations.editTask(this.editingTask);
+        console.log(`Saving edits for task: ${this.editingTask.id} (${this.editingTask.name})`);
+        
+        // If we have a direct socket connection
+        if (this.socket) {
+          // Create the update object - mapping to MongoDB fields
+          const updates = {
+            title: this.editingTask.name,
+            importance: this.editingTask.importance,
+            urgency: this.editingTask.urgency,
+            link: this.editingTask.link || '',
+            dueDate: this.editingTask.due_date
+          };
+          
+          this.socket.emit('updateTask', {
+            taskId: this.editingTask.id,
+            updates: updates
+          }, (response) => {
+            if (response && response.success) {
+              // Update local task
+              const taskIndex = this.tasks.findIndex(t => t.id === this.editingTask.id);
+              if (taskIndex !== -1) {
+                this.tasks[taskIndex] = {
+                  ...this.tasks[taskIndex],
+                  name: this.editingTask.name,
+                  importance: this.editingTask.importance,
+                  urgency: this.editingTask.urgency,
+                  link: this.editingTask.link,
+                  due_date: this.editingTask.due_date
+                };
+                
+                this.showNotification(`Task updated: ${this.editingTask.name}`, 'success');
+              }
+            } else {
+              console.error('Failed to update task');
+              this.showNotification('Failed to update task', 'error');
+            }
+          });
+        } else {
+          // Fallback to taskOperations
+          taskOperations.editTask(this.editingTask);
+        }
         
         this.showTaskEditForm = false;
         this.editingTask = {
@@ -415,15 +648,18 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log("Opening notes for task:", task.id, task.name);
         
         // Force fetch the latest task data from the server to ensure we have latest notes
-        const socket = this.socket || window.socket;
-        if (socket) {
-          socket.emit('getTaskDetails', { taskId: task.id });
+        if (this.socket) {
+          this.socket.emit('getTaskDetails', { taskId: task.id });
           
           // Set up a one-time listener for the response
-          socket.once('taskDetails', (taskData) => {
+          this.socket.once('taskDetails', (taskData) => {
             console.log("Received task details:", taskData);
-            if (taskData && taskData.id === task.id) {
-              this.currentTask = taskData;
+            if (taskData && (taskData.id === task.id || taskData._id === task.id)) {
+              this.currentTask = {
+                id: taskData._id || taskData.id,
+                name: taskData.title || taskData.name,
+                notes: taskData.notes || ''
+              };
               this.editingNotes = taskData.notes || '';
               this.noteTaskId = task.id;
               
@@ -490,22 +726,49 @@ window.addEventListener('DOMContentLoaded', () => {
         
         console.log("Notes content:", this.editingNotes);
         
-        // Store notes in database through socket
-        taskOperations.updateTaskNotes(this.currentTask.id, this.editingNotes);
-        
-        // Update notes in local data using Vue 3 reactivity - fixed
-        const taskIndex = this.tasks.findIndex(t => t.id === this.currentTask.id);
-        if (taskIndex >= 0) {
-          console.log("Updating local task data with new notes");
-          // Vue 3 way - directly modify the array
-          this.tasks[taskIndex] = { 
-            ...this.tasks[taskIndex], 
-            notes: this.editingNotes 
-          };
+        // If we have a direct socket connection
+        if (this.socket) {
+          this.socket.emit('updateTask', {
+            taskId: this.currentTask.id,
+            updates: {
+              notes: this.editingNotes
+            }
+          }, (response) => {
+            if (response && response.success) {
+              // Update the local task
+              const taskIndex = this.tasks.findIndex(t => t.id === this.currentTask.id);
+              if (taskIndex !== -1) {
+                console.log("Updating local task data with new notes");
+                this.tasks[taskIndex] = { 
+                  ...this.tasks[taskIndex], 
+                  notes: this.editingNotes 
+                };
+                
+                this.showNotification(`Notes ${this.editingNotes ? 'saved' : 'cleared'} for task: ${this.currentTask.name}`, 'success');
+              }
+            } else {
+              console.error('Failed to save notes');
+              this.showNotification('Failed to save notes', 'error');
+            }
+          });
+        } else {
+          // Fallback to taskOperations
+          taskOperations.updateTaskNotes(this.currentTask.id, this.editingNotes);
+          
+          // Update notes in local data using Vue 3 reactivity - fixed
+          const taskIndex = this.tasks.findIndex(t => t.id === this.currentTask.id);
+          if (taskIndex >= 0) {
+            console.log("Updating local task data with new notes");
+            // Vue 3 way - directly modify the array
+            this.tasks[taskIndex] = { 
+              ...this.tasks[taskIndex], 
+              notes: this.editingNotes 
+            };
+          }
+          
+          // Show notification
+          this.showNotification(`Notes ${this.editingNotes ? 'saved' : 'cleared'} for task: ${this.currentTask.name}`, 'success');
         }
-        
-        // Show notification
-        this.showNotification(`Notes ${this.editingNotes ? 'saved' : 'cleared'} for task: ${this.currentTask.name}`, 'success');
         
         // Close dialog
         this.showNotesDialog = false;
@@ -528,7 +791,20 @@ window.addEventListener('DOMContentLoaded', () => {
         };
 
         console.log('Adding new task:', task);
-        socket.emit('addTask', task, (res) => {
+        
+        // Transform to MongoDB schema format
+        const taskData = {
+          title: task.name,
+          importance: task.importance || 5,
+          urgency: task.urgency || 5,
+          completed: false,
+          parentId: task.parent_id,
+          dueDate: task.due_date,
+          notes: task.notes || '',
+          userId: "default-user-id" // Add default userId to satisfy MongoDB validation
+        };
+        
+        this.socket.emit('addTask', taskData, (res) => {
           console.log('Task added response:', res);
           if (res.success) {
             this.tasks.push(res.task);
@@ -552,10 +828,6 @@ window.addEventListener('DOMContentLoaded', () => {
           taskId: taskId,
           updates: updates
         });
-      },
-      
-      deleteTask(taskId) {
-        this.socket.emit('deleteTask', taskId);
       },
       
       isMongoId(id) {
