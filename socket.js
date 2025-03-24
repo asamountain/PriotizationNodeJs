@@ -1,218 +1,107 @@
 import { getTaskData, addTask, modifyTask, deleteTask, toggleTaskDone, editTask, updateTaskNotes } from "./db.js";
 import database from "./db.js";
+import mongoose from 'mongoose';
+import Task from './models/Task';
+import socketIo from 'socket.io';
 
-const setupSocket = (io) => {
-  // Process tasks to ensure numeric values
-  const processTaskData = (tasks) => {
-    console.log("SOCKET: Processing task data - before processing:", tasks.slice(0, 2));  
+// MongoDB connection
+async function connectToMongoDB() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to MongoDB');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+}
+
+const setupSocket = (server) => {
+  const io = socketIo(server);
+  
+  io.on('connection', async (socket) => {
+    console.log('New client connected');
     
-    const processed = tasks.map((task) => {
-      const result = {
-        id: task.id,
-        name: task.name,
-        importance: Number(task.importance) || 0,
-        urgency: Number(task.urgency) || 0,
-        done: task.done === 1 || task.done === true || task.done === "true",
-        created_at: task.created_at,
-        completed_at: task.completed_at,
-        parent_id: task.parent_id,
-        link: task.link || null,
-        due_date: task.due_date || null
-      };
-      
-      // Debug logging for link
-      if (task.link) {
-        console.log(`SOCKET: Task ${task.id} link before: ${task.link}, after: ${result.link}`);
+    try {
+      // Connect to MongoDB (if not already connected)
+      if (mongoose.connection.readyState !== 1) {
+        await connectToMongoDB();
       }
       
-      return result;
-    });
-    
-    console.log("SOCKET: After processing - sample:", processed.slice(0, 2));
-    return processed;
-  };
-  io.on("connection", (socket) => {
-    console.log("New client connected");
-
-    // Send initial data with processed numeric values
-    getTaskData()
-      .then((data) => {
-        const processedData = processTaskData(data);
-        console.log("Initial data fetched:", processedData.length, "items");
-        console.log("Sample data:", processedData.slice(0, 2));
-        socket.emit("initialData", { data: processedData });
-      })
-      .catch((error) => {
-        console.error("Failed to fetch initial data:", error);
-        socket.emit("initialData", { data: [] });
+      // Fetch tasks from MongoDB
+      console.log('Fetching tasks from MongoDB...');
+      const tasks = await Task.find({}).sort({ createdAt: -1 });
+      console.log(`Sending ${tasks.length} tasks to client`);
+      
+      // Send tasks to the client
+      socket.emit('initialData', { 
+        data: tasks,
+        dataSource: 'MongoDB',
+        timestamp: new Date().toISOString()
       });
-
-    socket.on("addTask", async (task) => {
+    } catch (error) {
+      console.error('Error fetching tasks from MongoDB:', error);
+      socket.emit('error', { message: 'Failed to load tasks' });
+    }
+    
+    // Handle new task creation
+    socket.on('addTask', async (taskData) => {
       try {
-        console.log("Adding task:", task);
-        const taskId = await addTask(task);
-        console.log("Task added successfully, ID:", taskId);
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to add task:", error);
-      }
-    });
-
-    socket.on("modifyTask", async (task) => {
-      try {
-        console.log("Modifying task:", task);
-        await modifyTask(task);
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to modify task:", error);
-      }
-    });
-
-    socket.on("deleteTask", async (id) => {
-      try {
-        console.log("Deleting task with ID:", id);
-        await deleteTask(id);
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to delete task:", error);
-      }
-    });
-
-    socket.on("updateTasks", async (task) => {
-      try {
-        const data = await getTaskData();
-        const processedData = processTaskData(data);
-        io.emit("updateTasks", { data: processedData });
-      } catch (error) {
-        console.error("Failed to update tasks:", error);
-      }
-    });
-
-    socket.on("toggleDone", async (id) => {
-      try {
-        console.log("Toggling done status for task with ID:", id);
-        await toggleTaskDone(id);
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to toggle task done status:", error);
-      }
-    });
-
-    socket.on("addSubtask", async ({ subtask, parentId }) => {
-      try {
-        console.log("Adding subtask:", subtask, "to parent:", parentId);
-        const subtaskId = await database.addSubtask(subtask, parentId);
-        console.log("Subtask added successfully, ID:", subtaskId);
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to add subtask:", error);
-      }
-    });
-
-    socket.on("updateSubtask", async ({ subtask }) => {
-      try {
-        console.log("Updating subtask:", subtask);
-        await database.updateSubtask(subtask);
-        console.log("Subtask updated successfully");
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to update subtask:", error);
-      }
-    });
-
-    socket.on("editTask", async (task) => {
-      try {
-        console.log("Editing task:", task);
-        await editTask(task);
-        console.log("Task edited successfully");
-
-        const data = await getTaskData();
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to edit task:", error);
-      }
-    });
-
-    socket.on("updateTaskNotes", async ({ taskId, notes }) => {
-      try {
-        console.log("SOCKET: Received updateTaskNotes request");
-        console.log("SOCKET: Task ID:", taskId);
-        console.log("SOCKET: Notes content:", notes);
-        
-        await updateTaskNotes(taskId, notes);
-        console.log("SOCKET: Notes updated successfully");
-
-        // Send updated data back to all clients
-        const data = await getTaskData();
-        console.log("SOCKET: Sending updated task data to clients");
-        io.emit("updateTasks", { data: processTaskData(data) });
-      } catch (error) {
-        console.error("Failed to update task notes:", error);
-        socket.emit("error", { message: "Failed to update notes" });
-      }
-    });
-
-    socket.on("getTaskDetails", async ({ taskId }) => {
-      try {
-        console.log("Fetching details for task ID:", taskId);
-        
-        // Get the specific task details from the database
-        const task = await new Promise((resolve, reject) => {
-          database.db.get("SELECT * FROM tasks WHERE id = ?", [taskId], (err, row) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            resolve(row);
-          });
+        const newTask = new Task({
+          ...taskData,
+          createdAt: new Date()
         });
         
-        if (task) {
-          console.log("Task details retrieved:", task);
-          console.log("Task notes:", task.notes);
-          
-          // Format the task data consistently with other responses
-          const formattedTask = {
-            id: task.id,
-            name: task.name,
-            importance: Number(task.importance) || 0,
-            urgency: Number(task.urgency) || 0,
-            done: task.done === 1 || task.done === true || task.done === "true",
-            created_at: task.created_at,
-            parent_id: task.parent_id,
-            due_date: task.due_date,
-            link: task.link,
-            notes: task.notes,
-            completed_at: task.completed_at
-          };
-          
-          socket.emit("taskDetails", formattedTask);
-        } else {
-          console.error("Task not found:", taskId);
-          socket.emit("taskDetails", null);
-        }
+        await newTask.save();
+        console.log('New task saved to MongoDB:', newTask._id);
+        
+        // Broadcast to all clients
+        io.emit('taskAdded', newTask);
       } catch (error) {
-        console.error("Error fetching task details:", error);
-        socket.emit("taskDetails", null);
+        console.error('Error adding task to MongoDB:', error);
+        socket.emit('error', { message: 'Failed to add task' });
       }
     });
-
-    socket.on("disconnect", () => {
-      console.log("Client disconnected");
+    
+    // Handle task updates
+    socket.on('updateTask', async ({ taskId, updates }) => {
+      try {
+        const updatedTask = await Task.findByIdAndUpdate(
+          taskId,
+          { ...updates, updatedAt: new Date() },
+          { new: true }
+        );
+        
+        if (!updatedTask) {
+          throw new Error('Task not found');
+        }
+        
+        console.log('Task updated in MongoDB:', taskId);
+        io.emit('taskUpdated', updatedTask);
+      } catch (error) {
+        console.error('Error updating task in MongoDB:', error);
+        socket.emit('error', { message: 'Failed to update task' });
+      }
+    });
+    
+    // Handle task deletion
+    socket.on('deleteTask', async (taskId) => {
+      try {
+        await Task.findByIdAndDelete(taskId);
+        console.log('Task deleted from MongoDB:', taskId);
+        io.emit('taskDeleted', { _id: taskId });
+      } catch (error) {
+        console.error('Error deleting task from MongoDB:', error);
+        socket.emit('error', { message: 'Failed to delete task' });
+      }
+    });
+    
+    // Handle disconnection
+    socket.on('disconnect', () => {
+      console.log('Client disconnected');
     });
   });
+  
+  return io;
 };
 
 export default setupSocket;

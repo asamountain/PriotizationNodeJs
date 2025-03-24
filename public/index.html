@@ -811,5 +811,49 @@
       }
     });
     </script>
+
+    <!-- Create a recursive task component -->
+    <script type="text/x-template" id="task-template">
+      <div class="task-item" :class="{ 'task-completed': task.completed }">
+        <div class="task-content">
+          <div class="task-header">
+            <h3>{{ task.title }}</h3>
+            <div class="task-metrics">
+              <div class="importance" :style="{ width: task.importance * 10 + '%' }"></div>
+              <div class="urgency" :style="{ width: task.urgency * 10 + '%' }"></div>
+            </div>
+          </div>
+          
+          <!-- Task actions -->
+          <div class="task-actions">
+            <button @click="$emit('toggle-complete', task)">
+              {{ task.completed ? 'Mark Incomplete' : 'Mark Complete' }}
+            </button>
+            <button @click="$emit('add-subtask', task)">Add Subtask</button>
+            <button @click="$emit('delete-task', task)">Delete</button>
+          </div>
+          
+          <!-- Recursively render child tasks -->
+          <div v-if="task.children && task.children.length" class="subtasks">
+            <task-item
+              v-for="child in task.children"
+              :key="child.id"
+              :task="child"
+              @toggle-complete="$emit('toggle-complete', $event)"
+              @add-subtask="$emit('add-subtask', $event)"
+              @delete-task="$emit('delete-task', $event)"
+            ></task-item>
+          </div>
+        </div>
+      </div>
+    </script>
+
+    <!-- Register the task component -->
+    <script>
+    Vue.component('task-item', {
+      template: '#task-template',
+      props: ['task']
+    });
+    </script>
 </body>
 </html>

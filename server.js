@@ -1,100 +1,181 @@
-import express from "express";
-import { createServer } from "http";
-import { Server } from "socket.io";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { initDatabase } from "./db.js";
-import setupSocket from "./socket.js";
+import 'dotenv/config';
+import express from 'express';
+import { createServer } from 'http';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import mongoose from 'mongoose';
+import { Server } from 'socket.io';
+import { networkInterfaces } from 'os';
+import detect from 'detect-port';
+import open from 'open';
+import Task from './models/Task.js';  // Import Task model
 
+// ES Module fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Express setup
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
-// Middleware
-app.use(express.static(join(__dirname, "public")));
-app.use(express.json());
-
-// Setup socket connection
-setupSocket(io);
-
-// Routes
-app.get("/", (req, res) => {
-    res.sendFile(join(__dirname, "public", "index.html"));
-});
-
-// Server initialization
-const startServer = async (port = 3000) => {
-    try {
-        await initDatabase();
-        server.listen(port, async () => {
-            console.log(`Server started on port ${port}`);
-            
-            // Use child_process instead of the open package
-            if (process.env.NODE_ENV !== 'production') {
-                const { exec } = await import('child_process');
-                const url = `http://localhost:${port}`;
-                console.log(`Opening browser at ${url}`);
-                
-                // Determine the command based on the operating system
-                let command;
-                switch (process.platform) {
-                    case 'darwin':  // macOS
-                        command = `open "${url}"`;
-                        break;
-                    case 'win32':   // Windows
-                        command = `start "" "${url}"`;
-                        break;
-                    default:        // Linux and others
-                        command = `xdg-open "${url}"`;
-                        break;
-                }
-                
-                // Execute the command and handle errors
-                exec(command, (error) => {
-                    if (error) {
-                        console.error('Error opening browser:', error);
-                    }
-                });
-            }
-        });
-    } catch (error) {
-        console.error("Server startup failed:", error);
-        process.exit(1);
+// Get local IP address
+const getLocalIP = () => {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
     }
+  }
+  return 'localhost';
 };
 
-// Handle port conflicts
-const findAvailablePort = (startPort) => {
-    return new Promise((resolve) => {
-        const server = createServer();
-        server.listen(startPort, () => {
-            const port = server.address().port;
-            server.close(() => resolve(port));
-        });
-        server.on("error", () => {
-            resolve(findAvailablePort(startPort + 1));
-        });
-    });
+// Find available port
+const findAvailablePort = async (startPort) => {
+  try {
+    const port = await detect(startPort);
+    return port;
+  } catch (err) {
+    console.error('Error finding available port:', err);
+    return startPort;
+  }
 };
 
-// Start server with dynamic port
-findAvailablePort(3000)
-    .then(port => startServer(port))
-    .catch(error => {
-        console.error("Port finding failed:", error);
-        process.exit(1);
+// Start server function
+const startServer = async () => {
+  try {
+    // Connect to MongoDB first
+    const MONGODB_URI = process.env.MONGODB_URI;
+    if (!MONGODB_URI) {
+      throw new Error('MONGODB_URI is not defined in environment variables');
+    }
+
+    await mongoose.connect(MONGODB_URI);
+    console.log('✅ Connected to MongoDB');
+
+    // Serve static files
+    app.use(express.static(join(__dirname, 'public')));
+
+    // Socket.IO connection handling
+    io.on('connection', async (socket) => {
+      console.log('👤 New client connected');
+      
+      try {
+        // Fetch tasks from MongoDB using imported Task model
+        const tasks = await Task.find({}).sort({ createdAt: -1 });
+        console.log(`📤 Sending ${tasks.length} tasks to client`);
+        
+        socket.emit('initialData', { 
+          data: tasks,
+          dataSource: 'MongoDB',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Handle new task creation
+        socket.on('addTask', async (taskData) => {
+          try {
+            const newTask = new Task({
+              ...taskData,
+              createdAt: new Date()
+            });
+            
+            await newTask.save();
+            console.log('✨ New task saved:', newTask._id);
+            io.emit('taskAdded', newTask);
+          } catch (error) {
+            console.error('❌ Error adding task:', error);
+            socket.emit('error', { message: 'Failed to add task' });
+          }
+        });
+        
+        // Handle task updates
+        socket.on('updateTask', async ({ taskId, updates }) => {
+          try {
+            const updatedTask = await Task.findByIdAndUpdate(
+              taskId,
+              { ...updates, updatedAt: new Date() },
+              { new: true }
+            );
+            
+            if (!updatedTask) {
+              throw new Error('Task not found');
+            }
+            
+            console.log('📝 Task updated:', taskId);
+            io.emit('taskUpdated', updatedTask);
+          } catch (error) {
+            console.error('❌ Error updating task:', error);
+            socket.emit('error', { message: 'Failed to update task' });
+          }
+        });
+        
+        // Handle task deletion
+        socket.on('deleteTask', async (taskId) => {
+          try {
+            await Task.findByIdAndDelete(taskId);
+            console.log('🗑️ Task deleted:', taskId);
+            io.emit('taskDeleted', { _id: taskId });
+          } catch (error) {
+            console.error('❌ Error deleting task:', error);
+            socket.emit('error', { message: 'Failed to delete task' });
+          }
+        });
+        
+      } catch (error) {
+        console.error('❌ Socket error:', error);
+        socket.emit('error', { message: 'Server error' });
+      }
     });
 
-// Error handling
-process.on("unhandledRejection", (error) => {
-    console.error("Unhandled Rejection:", error);
+    // Find available port
+    const preferredPort = parseInt(process.env.PORT) || 3000;
+    const port = await findAvailablePort(preferredPort);
+    const localIP = getLocalIP();
+
+    // Start the server
+    server.listen(port, async () => {
+      const localUrl = `http://localhost:${port}`;
+      const networkUrl = `http://${localIP}:${port}`;
+      
+      console.log('\n🚀 Server is running!');
+      console.log('-------------------');
+      console.log(`📡 Local:   ${localUrl}`);
+      console.log(`🌐 Network: ${networkUrl}`);
+      console.log('-------------------\n');
+
+      // Open browser automatically
+      try {
+        await open(localUrl);
+        console.log('🌐 Browser opened automatically');
+      } catch (err) {
+        console.log('ℹ️ Could not open browser automatically');
+        console.log('   Please open one of the URLs above manually');
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Server startup error:', err);
+    process.exit(1);
+  }
+};
+
+// Handle server errors
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Unhandled Rejection:', err);
+  process.exit(1);
 });
 
-process.on("uncaughtException", (error) => {
-    console.error("Uncaught Exception:", error);
-    process.exit(1);
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('🔄 Server closed. Process terminating...');
+    process.exit(0);
+  });
+});
+
+// Start the server
+startServer().catch(err => {
+  console.error('❌ Failed to start server:', err);
+  process.exit(1);
 });

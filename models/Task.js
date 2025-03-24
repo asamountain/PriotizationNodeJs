@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Adjust field names and types based on your actual data
 const TaskSchema = new mongoose.Schema({
@@ -11,22 +11,18 @@ const TaskSchema = new mongoose.Schema({
   // Main task fields
   title: {
     type: String,
-    required: [true, 'Task title is required'],
+    required: true,
     trim: true
   },
   
   // Priority fields
   importance: {
     type: Number,
-    default: 5,
-    min: 0,
-    max: 10
+    default: 5
   },
   urgency: {
     type: Number,
-    default: 5,
-    min: 0,
-    max: 10
+    default: 5
   },
   
   // Status fields
@@ -34,31 +30,15 @@ const TaskSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  completedAt: {
-    type: Date,
-    default: null
-  },
+  completedAt: Date,
   
   // Relationship fields
-  parentId: {
-    type: String,
-    default: null,
-    index: true
-  },
+  parentId: String,
   
   // Additional info
-  dueDate: {
-    type: Date,
-    default: null
-  },
-  link: {
-    type: String,
-    trim: true
-  },
-  notes: {
-    type: String,
-    trim: true
-  },
+  dueDate: Date,
+  link: String,
+  notes: String,
   userId: {
     type: String,
     required: true,
@@ -81,5 +61,5 @@ TaskSchema.virtual('isOverdue').get(function() {
   return new Date() > this.dueDate && !this.completed;
 });
 
-// Prevent NextJS from creating multiple models during hot-reload
-module.exports = mongoose.models.Task || mongoose.model('Task', TaskSchema); 
+const Task = mongoose.models.Task || mongoose.model('Task', TaskSchema);
+export default Task; 

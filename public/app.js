@@ -60,8 +60,6 @@ window.addEventListener('DOMContentLoaded', () => {
     data() {
       return {
         tasks: [],
-        activeTasks: [],
-        completedTasks: [],
         taskName: '',
         taskImportance: 5,
         taskUrgency: 5,
@@ -123,7 +121,26 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       hasCompletedTasks() {
         return this.completedTasks && this.completedTasks.length > 0;
-      }
+      },
+      hierarchicalTasks() {
+        return this.buildTaskHierarchy(this.tasks);
+      },
+      activeTasks() {
+        const tasks = this.tasks.filter(task => {
+          // Debug checking each task
+          console.log('Checking task for active status:', task.id, task.name, 'done:', task.done);
+          
+          // MongoDB field is "completed" but we transform it to "done" in handleInitialData
+          // Just be extra explicit about what we're checking
+          return task.done === false && !task.parent_id;
+        });
+        console.log('Active tasks count:', tasks.length);
+        console.warn('IMPORTANT: Active tasks array:', JSON.stringify(tasks.map(t => ({id: t.id, name: t.name}))));
+        return tasks;
+      },
+      completedTasks() {
+        return this.tasks.filter(task => task.done && !task.parent_id);
+      },
     },
     methods: {
       toggleTheme() {
@@ -136,6 +153,19 @@ window.addEventListener('DOMContentLoaded', () => {
         if (chartVisualization && typeof chartVisualization.updateChartColors === 'function') {
           chartVisualization.updateChartColors();
         }
+      },
+      
+      // New method to force refresh the task list
+      refreshTaskList() {
+        console.log('Forcing task list refresh');
+        // Create a temporary copy 
+        const tempTasks = [...this.tasks];
+        // Clear and then restore the tasks to force Vue to refresh the computed properties
+        this.tasks = [];
+        setTimeout(() => {
+          this.tasks = tempTasks;
+          console.log('Tasks refreshed, active count:', this.activeTasks.length);
+        }, 10);
       },
       
       submitTask() {
@@ -301,8 +331,6 @@ window.addEventListener('DOMContentLoaded', () => {
       
       updateTasks(tasks) {
         this.tasks = tasks;
-        this.activeTasks = tasks.filter(task => !task.done && !task.parent_id);
-        this.completedTasks = tasks.filter(task => task.done && !task.parent_id);
         
         // Debug: Log information about tasks with links
         console.log('Tasks with links:');
@@ -466,29 +494,183 @@ window.addEventListener('DOMContentLoaded', () => {
         this.editingNotes = '';
         this.noteTaskId = null;
       },
-    },
-    mounted() {
-      // Initialize socket connection first
-      this.socket = io(window.location.origin);
       
-      // Listen for socket connection and request data
-      this.socket.on('connect', () => {
-        console.log('Socket connected, requesting initial data');
-        this.socket.emit('requestInitialData');
-      });
+      addTask() {
+        if (!this.newTaskName) return;
+
+        const task = {
+          name: this.newTaskName,
+          importance: this.newTaskImportance,
+          urgency: this.newTaskUrgency,
+          done: false,
+          due_date: this.newTaskDueDate,
+          notes: this.newTaskNotes,
+          parent_id: this.selectedParentId || null
+        };
+
+        console.log('Adding new task:', task);
+        socket.emit('addTask', task, (res) => {
+          console.log('Task added response:', res);
+          if (res.success) {
+            this.tasks.push(res.task);
+            console.log('Tasks count after add:', this.tasks.length);
+            console.log('Active tasks count after add:', this.tasks.filter(t => !t.done && !t.parent_id).length);
+            
+            // Reset form
+            this.newTaskName = '';
+            this.newTaskImportance = 1;
+            this.newTaskUrgency = 1;
+            this.newTaskNotes = '';
+            this.newTaskDueDate = null;
+            this.selectedParentId = null;
+            this.closeAddDialog();
+          }
+        });
+      },
       
-      // Handle initial data and updates
-      this.socket.on('initialData', (data) => {
+      updateTask(taskId, updates) {
+        this.socket.emit('updateTask', {
+          taskId: taskId,
+          updates: updates
+        });
+      },
+      
+      deleteTask(taskId) {
+        this.socket.emit('deleteTask', taskId);
+      },
+      
+      isMongoId(id) {
+        return typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
+      },
+      
+      handleInitialData(data) {
         console.log('Received initial data:', data);
         if (data && data.data) {
-          this.updateTasks(data.data);
+          const transformedTasks = data.data.map(task => ({
+            id: task._id,
+            name: task.title,
+            importance: task.importance || 5,
+            urgency: task.urgency || 5,
+            done: task.completed || false,
+            parent_id: task.parentId || null,
+            created_at: task.createdAt,
+            completed_at: task.completedAt,
+            due_date: task.dueDate ? new Date(task.dueDate) : null,
+            notes: task.notes || '',
+            link: task.link || ''
+          }));
+          
+          this.tasks = transformedTasks;
+          console.log('Tasks updated:', this.tasks);
+          
+          // Additional debugging information
+          console.log('Task activation status:');
+          transformedTasks.forEach(task => {
+            console.log(`Task ${task.id} (${task.name}): done=${task.done}, parent_id=${task.parent_id}`);
+          });
+          
+          // Check active tasks immediately after setting
+          const activeTasksCount = transformedTasks.filter(t => !t.done && !t.parent_id).length;
+          console.log(`Active tasks count (direct check): ${activeTasksCount}`);
+          
+          // Show notification with task count info
+          this.showNotification(`Loaded ${transformedTasks.length} tasks (${activeTasksCount} active)`, 'info', 2000);
+          
+          // Force a refresh to ensure computed properties update
+          this.refreshTaskList();
+          
+          // Trigger chart update
+          if (chartVisualization && typeof chartVisualization.updateTaskData === 'function') {
+            setTimeout(() => chartVisualization.updateTaskData(this.tasks), 100);
+          }
+        }
+      },
+      
+      buildTaskHierarchy(tasks) {
+        // Create a map of tasks by their IDs
+        const taskMap = new Map();
+        tasks.forEach(task => {
+          taskMap.set(task.id || task._id, {
+            ...task,
+            id: task.id || task._id, // Ensure consistent ID field
+            children: []
+          });
+        });
+
+        // Build the hierarchy
+        const rootTasks = [];
+        taskMap.forEach(task => {
+          if (task.parent_id || task.parentId) {
+            const parentId = task.parent_id || task.parentId;
+            const parent = taskMap.get(parentId);
+            if (parent) {
+              parent.children.push(task);
+            } else {
+              rootTasks.push(task); // If parent not found, treat as root
+            }
+          } else {
+            rootTasks.push(task);
+          }
+        });
+
+        return rootTasks;
+      }
+    },
+    mounted() {
+      // Initialize socket connection
+      this.socket = io();
+      
+      // Listen for initial data from MongoDB
+      this.socket.on('initialData', (data) => {
+        this.handleInitialData(data);
+      });
+
+      // Listen for task updates
+      this.socket.on('taskAdded', (task) => {
+        // Transform the new task to match frontend structure
+        const newTask = {
+          id: task._id,
+          name: task.title || task.name,
+          importance: task.importance || 5,
+          urgency: task.urgency || 5,
+          done: task.completed || task.done || false,
+          parent_id: task.parentId || task.parent_id || null,
+          created_at: task.createdAt || task.created_at,
+          completed_at: task.completedAt || task.completed_at,
+          due_date: task.dueDate || task.due_date ? new Date(task.dueDate || task.due_date) : null,
+          notes: task.notes || '',
+          link: task.link || ''
+        };
+        this.tasks.push(newTask);
+        console.log('Task added to UI:', newTask);
+      });
+
+      this.socket.on('taskUpdated', (updatedTask) => {
+        const index = this.tasks.findIndex(t => t.id === updatedTask._id);
+        if (index !== -1) {
+          // Transform the updated task
+          this.tasks[index] = {
+            id: updatedTask._id,
+            name: updatedTask.title || updatedTask.name,
+            importance: updatedTask.importance || 5,
+            urgency: updatedTask.urgency || 5,
+            done: updatedTask.completed || updatedTask.done || false,
+            parent_id: updatedTask.parentId || updatedTask.parent_id || null,
+            created_at: updatedTask.createdAt || updatedTask.created_at,
+            completed_at: updatedTask.completedAt || updatedTask.completed_at,
+            due_date: updatedTask.dueDate || updatedTask.due_date ? new Date(updatedTask.dueDate || updatedTask.due_date) : null,
+            notes: updatedTask.notes || '',
+            link: updatedTask.link || ''
+          };
+          console.log('Task updated in UI:', this.tasks[index]);
         }
       });
-      
-      this.socket.on('updateTasks', (data) => {
-        console.log('Received task update:', data);
-        if (data && data.data) {
-          this.updateTasks(data.data);
+
+      this.socket.on('taskDeleted', (data) => {
+        const index = this.tasks.findIndex(t => t.id === data._id);
+        if (index !== -1) {
+          this.tasks.splice(index, 1);
+          console.log('Task deleted from UI:', data._id);
         }
       });
       
