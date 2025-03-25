@@ -11,18 +11,22 @@ const TaskSchema = new mongoose.Schema({
   // Main task fields
   title: {
     type: String,
-    required: true,
+    required: [true, 'Task title is required'],
     trim: true
   },
   
   // Priority fields
   importance: {
     type: Number,
-    default: 5
+    default: 5,
+    min: 0,
+    max: 10
   },
   urgency: {
     type: Number,
-    default: 5
+    default: 5,
+    min: 0,
+    max: 10
   },
   
   // Status fields
@@ -30,18 +34,34 @@ const TaskSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  completedAt: Date,
+  completedAt: {
+    type: Date,
+    default: null
+  },
   
   // Relationship fields
-  parentId: String,
+  parentId: {
+    type: String,
+    default: null,
+    index: true
+  },
   
   // Additional info
-  dueDate: Date,
-  link: String,
-  notes: String,
+  dueDate: {
+    type: Date,
+    default: null
+  },
+  link: {
+    type: String,
+    trim: true
+  },
+  notes: {
+    type: String,
+    trim: true
+  },
   userId: {
     type: String,
-    required: true,
+    default: 'default-user', // Default value instead of required
     index: true
   },
 }, {
@@ -61,5 +81,5 @@ TaskSchema.virtual('isOverdue').get(function() {
   return new Date() > this.dueDate && !this.completed;
 });
 
-const Task = mongoose.models.Task || mongoose.model('Task', TaskSchema);
-export default Task; 
+// This is important to prevent model recompilation errors
+export default mongoose.models.Task || mongoose.model('Task', TaskSchema); 

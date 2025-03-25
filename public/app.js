@@ -99,8 +99,7 @@ window.addEventListener('DOMContentLoaded', () => {
           importance: 5,
           urgency: 5,
           link: '',
-          due_date: null,
-          parent_id: null
+          due_date: null
         },
         possibleParents: [],
         snackbar: {
@@ -498,19 +497,6 @@ window.addEventListener('DOMContentLoaded', () => {
           // Ensure date is properly formatted for form input
           due_date: task.due_date ? new Date(task.due_date) : null
         };
-        // Load possible parent tasks (excluding self and its descendants)
-        this.possibleParents = this.tasks.filter(t => {
-          // Exclude self
-          if (t.id === task.id) return false;
-          // Exclude current task's descendants to prevent circular references
-          const isDescendant = (parentId) => {
-            const children = this.tasks.filter(child => child.parent_id === parentId);
-            return children.some(child => 
-              child.id === task.id || isDescendant(child.id)
-            );
-          };
-          return !isDescendant(t.id);
-        });
         this.showTaskEditForm = true;
       },
       
@@ -527,8 +513,7 @@ window.addEventListener('DOMContentLoaded', () => {
             importance: this.editingTask.importance,
             urgency: this.editingTask.urgency,
             link: this.editingTask.link || '',
-            dueDate: this.editingTask.due_date,
-            parentId: this.editingTask.parent_id // Add parent_id to updates
+            dueDate: this.editingTask.due_date
           };
           
           this.socket.emit('updateTask', {
@@ -539,30 +524,16 @@ window.addEventListener('DOMContentLoaded', () => {
               // Update local task
               const taskIndex = this.tasks.findIndex(t => t.id === this.editingTask.id);
               if (taskIndex !== -1) {
-                // Check if parent changed
-                const oldParentId = this.tasks[taskIndex].parent_id;
-                const newParentId = this.editingTask.parent_id;
-                
                 this.tasks[taskIndex] = {
                   ...this.tasks[taskIndex],
                   name: this.editingTask.name,
                   importance: this.editingTask.importance,
                   urgency: this.editingTask.urgency,
                   link: this.editingTask.link,
-                  due_date: this.editingTask.due_date,
-                  parent_id: this.editingTask.parent_id
+                  due_date: this.editingTask.due_date
                 };
                 
-                // Force a refresh to update hierarchy if parent changed
-                if (oldParentId !== newParentId) {
-                  this.refreshTaskList();
-                  this.showNotification(
-                    newParentId ? 'Task moved to subtask' : 'Task moved to main task',
-                    'success'
-                  );
-                } else {
-                  this.showNotification(`Task updated: ${this.editingTask.name}`, 'success');
-                }
+                this.showNotification(`Task updated: ${this.editingTask.name}`, 'success');
               }
             } else {
               console.error('Failed to update task');
@@ -581,8 +552,7 @@ window.addEventListener('DOMContentLoaded', () => {
           importance: 5,
           urgency: 5,
           link: '',
-          due_date: null,
-          parent_id: null
+          due_date: null
         };
       },
       
@@ -1012,8 +982,25 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     },
     mounted() {
-      // Initialize socket connection
-      this.socket = io();
+      // Initialize socket connection with polling transport only
+      this.socket = io({
+        transports: ['polling'],  // Use only polling, no websocket
+        path: '/socket.io/',
+        reconnectionDelayMax: 10000,
+        reconnectionAttempts: 5,
+        timeout: 10000
+      });
+      
+      // Connection events
+      this.socket.on('connect', () => {
+        console.log('Connected to server');
+        this.showNotification('Connected to server', 'success');
+      });
+      
+      this.socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        this.showNotification('Connection error: ' + error.message, 'error');
+      });
       
       // Listen for initial data from MongoDB
       this.socket.on('initialData', (data) => {

@@ -746,14 +746,12 @@
                 </v-card>
             </v-dialog>
 
-            <!-- Task Edit Dialog -->
-            <v-dialog v-model="showTaskEditForm" max-width="600px">
+            <!-- Edit Task Dialog -->
+            <v-dialog v-model="showTaskEditForm" max-width="500px">
                 <v-card>
-                    <v-card-title class="text-h5 bg-primary text-white">
-                        Edit Task
-                    </v-card-title>
+                    <v-card-title class="text-h5">Edit Task</v-card-title>
                     <v-card-text>
-                        <v-form class="mt-4">
+                        <v-form @submit.prevent="saveTaskEdit">
                             <v-text-field
                                 v-model="editingTask.name"
                                 label="Task Name"
@@ -761,42 +759,34 @@
                                 variant="outlined"
                             ></v-text-field>
                             
-                            <!-- Parent Task Selection -->
-                            <v-select
-                                v-model="editingTask.parent_id"
-                                :items="possibleParents"
-                                item-title="name"
-                                item-value="id"
-                                label="Parent Task (Optional)"
-                                variant="outlined"
-                                clearable
-                                :hint="editingTask.parent_id ? 'This will be a subtask' : 'This will be a main task'"
-                                persistent-hint
-                            ></v-select>
-
-                            <v-slider
-                                v-model="editingTask.importance"
-                                label="Importance"
-                                min="1"
-                                max="10"
-                                thumb-label
-                                class="mt-4"
-                            ></v-slider>
-                            
-                            <v-slider
-                                v-model="editingTask.urgency"
-                                label="Urgency"
-                                min="1"
-                                max="10"
-                                thumb-label
-                            ></v-slider>
-                            
                             <v-text-field
                                 v-model="editingTask.link"
-                                label="Link (Optional)"
+                                label="Link (optional)"
                                 variant="outlined"
-                                placeholder="http://"
+                                placeholder="Add a URL (http://example.com)"
                             ></v-text-field>
+                            
+                            <v-subheader>Importance (1-10)</v-subheader>
+                            <v-slider
+                                v-model="editingTask.importance"
+                                min="1"
+                                max="10"
+                                step="1"
+                                show-ticks="always"
+                                thumb-label
+                                color="primary"
+                            ></v-slider>
+                            
+                            <v-subheader>Urgency (1-10)</v-subheader>
+                            <v-slider
+                                v-model="editingTask.urgency"
+                                min="1"
+                                max="10"
+                                step="1"
+                                show-ticks="always"
+                                thumb-label
+                                color="secondary"
+                            ></v-slider>
                             
                             <v-date-picker
                                 v-model="editingTask.due_date"
