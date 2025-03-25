@@ -110,33 +110,6 @@ const startServer = async () => {
           }
         });
         
-        // Handle task parent update (for drag and drop)
-        socket.on('updateTaskParent', async ({ taskId, newParentId, userId }) => {
-          try {
-            const update = {
-              parent_id: newParentId || null,
-              updatedAt: new Date(),
-              userId: userId || "default-user-id"
-            };
-            
-            const updatedTask = await Task.findByIdAndUpdate(
-              taskId,
-              update,
-              { new: true }
-            );
-            
-            if (!updatedTask) {
-              throw new Error('Task not found');
-            }
-            
-            console.log('🔄 Task parent updated:', taskId, 'New parent:', newParentId || 'root');
-            io.emit('taskUpdated', updatedTask);
-          } catch (error) {
-            console.error('❌ Error updating task parent:', error);
-            socket.emit('error', { message: 'Failed to update task parent' });
-          }
-        });
-        
         // Handle task deletion
         socket.on('deleteTask', async (taskId) => {
           try {
