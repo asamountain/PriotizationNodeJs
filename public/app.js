@@ -927,76 +927,50 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       
       buildTaskHierarchy(tasks) {
-        console.log('Building task hierarchy from', tasks.length, 'tasks');
-        
-        // Create a map of tasks by their IDs
-        const taskMap = new Map();
-        
-        // Also create a map by original_id for legacy reference if needed
-        const originalIdMap = new Map();
-        
-        tasks.forEach(task => {
-          // Use consistent ID field and ensure it's a string
-          const taskId = String(task.id || task._id);
-          const taskWithChildren = {
-            ...task,
-            id: taskId, // Ensure consistent ID field
-            children: []
-          };
-          
-          taskMap.set(taskId, taskWithChildren);
-          
-          // If task has an original_id, also map it
-          if (task.original_id) {
-            originalIdMap.set(task.original_id, taskWithChildren);
-          }
-          
-          // Debug info
-          console.log(`Task ${taskId} (${task.name}): parent_id=${task.parent_id || 'none'}, original_id=${task.original_id || 'none'}`);
-        });
-
-        console.log('ID mapping size:', taskMap.size);
-        console.log('Original ID mapping size:', originalIdMap.size);
-
-        // Build the hierarchy
+        console.log(`Building hierarchy from ${tasks.length} tasks`);
+        const taskMap = {};
         const rootTasks = [];
-        taskMap.forEach(task => {
-          // Check if task has a parent
-          if (task.parent_id) {
-            // Convert parent_id to string for consistent comparison
-            const parentId = String(task.parent_id);
-            console.log(`Looking for parent ${parentId} for task ${task.id} (${task.name})`);
-            
-            // First try to find parent by direct MongoDB ID
-            let parent = taskMap.get(parentId);
-            
-            // If not found and we have original IDs, try using those
-            if (!parent && originalIdMap.has(parentId)) {
-              parent = originalIdMap.get(parentId);
-              console.log(`Found parent via original_id mapping for ${task.name}`);
-            }
-            
-            if (parent) {
-              console.log(`Found parent: ${parent.name} for task: ${task.name}`);
-              parent.children.push(task);
-            } else {
-              console.warn(`Parent not found for task ${task.id} (${task.name}), treating as root`);
-              rootTasks.push(task); // If parent not found, treat as root
-            }
-          } else {
-            console.log(`Task ${task.id} (${task.name}) is a root task`);
-            rootTasks.push(task);
-          }
+
+        // First pass: Create a map of all tasks by ID
+        tasks.forEach(task => {
+          taskMap[task.id] = { ...task, children: [] };
         });
 
-        console.log('Hierarchy built:', rootTasks.length, 'root tasks');
-        console.log('Root tasks:', rootTasks.map(t => t.name));
-        rootTasks.forEach(task => {
-          if (task.children && task.children.length) {
-            console.log(`Task ${task.name} has ${task.children.length} children:`, 
-              task.children.map(c => c.name).join(', '));
+        // Second pass: Link children to their parents
+        tasks.forEach(task => {
+          if (task.parent_id && taskMap[task.parent_id]) {
+            taskMap[task.parent_id].children.push(taskMap[task.id]);
+          } else if (!task.parent_id) {
+            rootTasks.push(taskMap[task.id]);
           }
         });
+        
+        // Define the sorting function
+        const sortByPriority = (a, b) => {
+          // Sort by importance descending
+          if (b.importance !== a.importance) {
+            return b.importance - a.importance;
+          }
+          // If importance is equal, sort by urgency descending
+          return b.urgency - a.urgency;
+        };
+
+        // Sort root tasks
+        rootTasks.sort(sortByPriority);
+
+        // Sort children within each root task
+        rootTasks.forEach(rootTask => {
+          if (rootTask.children && rootTask.children.length > 0) {
+            rootTask.children.sort(sortByPriority);
+          }
+        });
+        
+        console.log(`Hierarchy built with ${rootTasks.length} root tasks.`);
+        // Optional: Log the first root task and its children to verify sorting
+        // if (rootTasks.length > 0) {
+        //   console.log('First root task:', rootTasks[0]);
+        //   console.log('Its children:', rootTasks[0].children);
+        // }
 
         return rootTasks;
       },
