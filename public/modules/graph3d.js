@@ -53,7 +53,11 @@ function kindOf(t) { return t.kind || 'action'; }
 
 // distinct tint per outcome, so actions can be colour-grouped by the goal they serve
 const OUTCOME_PALETTE = ['#c9a227', '#b5651d', '#5f7d5f', '#4f6d7a', '#a15c5c', '#6b5b95', '#8a7d3f', '#7a5c8a'];
-const UNROUTED = '#9aa0a0';
+// Dark ink, not a pale grey — this chart is now a small curated set of
+// starred missions, and a thin-stroke Lucide icon in light grey on white
+// reads as barely-there on a phone screen. Contrast matters more than
+// "unrouted = neutral" here.
+const UNROUTED = '#333333';
 
 // goals ("outcome") and vision ("identity") are never placed on the floor
 // or drawn as their own nodes — see the render() comment where their
@@ -359,6 +363,7 @@ export class Graph3D {
     // the floor.
     const focusActions = list.filter((t) => kindOf(t) === 'action' && t.is_focus);
     const subActions = list.filter((t) => kindOf(t) === 'action' && t.parent_id && !t.is_focus && kindById.get(Number(t.parent_id)) !== undefined);
+    const subActionIds = new Set(subActions.map((t) => Number(t.id)));
     const actions = focusActions;
     const outcomes = list.filter((t) => kindOf(t) === 'outcome');
 
@@ -371,7 +376,7 @@ export class Graph3D {
     // they don't count toward the density that matters here.
     const widthFactor = Math.min(1, (this.el.clientWidth || 480) / 480);
     const densityFactor = Math.min(1, 12 / Math.max(1, actions.length));
-    const sizeScale = Math.max(0.4, widthFactor * densityFactor);
+    const sizeScale = Math.max(0.55, widthFactor * densityFactor);
 
     // Floor plane: X = cost of inaction, Z = importance (percentile-ranked so
     // tie-heavy boards fan out). Action nodes sit flat on the floor.
@@ -463,10 +468,11 @@ export class Graph3D {
       el.className = 'g3d-node';
       el.innerHTML = lucideSvg(iconFor(t)) || '&bull;';
       el.style.color = actionColor.get(id) || UNROUTED;
-      const subMag = t.parent_id ? mag * 0.72 : mag;
+      const isOrbitChild = subActionIds.has(id);
+      const subMag = isOrbitChild ? mag * 0.72 : mag;
       el.style.fontSize = `${Math.round((14 + subMag * 12) * sizeScale)}px`;
       if (t.status === 'in_progress') el.classList.add('is-doing');
-      if (t.parent_id) el.classList.add('is-subtask'); // hidden by default; revealed when its parent is focused
+      if (isOrbitChild) el.classList.add('is-subtask'); // hidden by default; revealed when its parent is focused
       const iconObj = new CSS2DObject(el);
       mesh.add(iconObj);
 
