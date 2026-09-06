@@ -351,13 +351,15 @@ export class Graph3D {
     const rels = Array.isArray(relationships) ? relationships : [];
     const kindById = new Map(list.map((t) => [Number(t.id), kindOf(t)]));
 
-    // Subtasks sit out of the ranked floor entirely — they're revealed as a
-    // small cluster around their parent on focus instead of independently
-    // scored, so a board with a lot of subtasks doesn't crowd the floor.
-    // Only starred ("focus") root actions ever get a floor slot at all.
-    const rootActions = list.filter((t) => kindOf(t) === 'action' && !t.parent_id && t.is_focus);
-    const subActions = list.filter((t) => kindOf(t) === 'action' && t.parent_id && kindById.get(Number(t.parent_id)) !== undefined);
-    const actions = rootActions;
+    // Any starred ("focus") action gets its own ranked floor slot, no matter
+    // how deep it's nested — a core mission buried under three parents is
+    // still a core mission. Its own non-starred subtasks sit out of the
+    // ranked floor entirely and are instead revealed as a small cluster
+    // around it on focus, so a board with a lot of subtasks doesn't crowd
+    // the floor.
+    const focusActions = list.filter((t) => kindOf(t) === 'action' && t.is_focus);
+    const subActions = list.filter((t) => kindOf(t) === 'action' && t.parent_id && !t.is_focus && kindById.get(Number(t.parent_id)) !== undefined);
+    const actions = focusActions;
     const outcomes = list.filter((t) => kindOf(t) === 'outcome');
 
     // Icons need to shrink on two independent axes: a narrow (mobile) panel
