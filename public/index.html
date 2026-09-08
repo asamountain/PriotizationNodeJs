@@ -522,6 +522,9 @@
       }
       .task-search-result:last-child { border-bottom: none; }
       .task-search-result:hover, .task-search-result:active { background: #f5f5f5; }
+      .task-search-result.is-active { background: #111; }
+      .task-search-result.is-active .task-search-result__name { color: #fff; }
+      .task-search-result.is-active .task-search-result__breadcrumb { color: #ccc; }
       .task-search-result__name { font-family: var(--ed-font); font-size: 0.9rem; color: #111; }
       .task-search-result__breadcrumb { font-size: 0.72rem; color: #6b6b6b; }
       .task-search-empty { padding: 10px 12px; font-size: 0.85rem; color: #6b6b6b; }
@@ -1336,13 +1339,15 @@
                                     clearable
                                     prepend-inner-icon="mdi-magnify"
                                     class="task-search-field"
+                                    @keydown="taskSearchKeydown"
                                 ></v-text-field>
                                 <div v-if="taskSearchQuery" class="task-search-results">
                                     <div
-                                        v-for="r in taskSearchResults"
+                                        v-for="(r, i) in taskSearchResults"
                                         :key="r.id"
-                                        class="task-search-result"
+                                        :class="['task-search-result', { 'is-active': i === taskSearchActive }]"
                                         @click="jumpToTask(r.id)"
+                                        @mousemove="taskSearchActive = i"
                                     >
                                         <span class="task-search-result__name">{{ r.name }}</span>
                                         <span v-if="r.breadcrumb" class="task-search-result__breadcrumb">{{ r.breadcrumb }}</span>

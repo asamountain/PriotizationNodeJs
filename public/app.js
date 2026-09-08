@@ -135,6 +135,7 @@ window.addEventListener('DOMContentLoaded', () => {
         csvImportResult: null,
         taskSortBy: localStorage.getItem('taskSortBy') || 'priority-high', // Default sort
         taskSearchQuery: '',
+        taskSearchActive: 0,
         leftPanelWidth: parseFloat(localStorage.getItem('leftPanelWidth')) || 55,
         isResizing: false,
         nodeCard: { open: false, x: 0, y: 0, task: null, enables: [] },
@@ -373,6 +374,13 @@ window.addEventListener('DOMContentLoaded', () => {
           el.classList.add('task-jump-highlight');
           setTimeout(() => el.classList.remove('task-jump-highlight'), 1500);
         });
+      },
+      taskSearchKeydown(e) {
+        const list = this.taskSearchResults;
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.taskSearchActive = Math.min(this.taskSearchActive + 1, list.length - 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this.taskSearchActive = Math.max(this.taskSearchActive - 1, 0); }
+        else if (e.key === 'Enter') { e.preventDefault(); const r = list[this.taskSearchActive]; if (r) this.jumpToTask(r.id); }
+        else if (e.key === 'Escape') { this.taskSearchQuery = ''; }
       },
       sortTasks(tasks) {
         if (!tasks || !Array.isArray(tasks)) return [];
@@ -1745,6 +1753,9 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       enableQuery() {
         this.enableActive = 0;
+      },
+      taskSearchQuery() {
+        this.taskSearchActive = 0;
       },
       navView(v) {
         track('view', v);
